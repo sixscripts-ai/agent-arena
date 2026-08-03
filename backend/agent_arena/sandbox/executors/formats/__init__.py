@@ -48,6 +48,12 @@ from .exploit_vs_patch import (
     ExploitVsPatchExecutor,
 )
 
+from .time_limited_siege import (
+    NAME as _NAME_20,
+    SLUG as _SLUG_20,
+    TimeLimitedSiegeExecutor,
+)
+
 FORMAT_EXECUTORS: dict[str, "type[Executor]"] = {}
 
 
@@ -62,3 +68,5 @@ register(PolymorphVsSignatureExecutor, _NAME_16, _SLUG_16)
 register(CredReuseVsHardeningExecutor, _NAME_17, _SLUG_17)
 register(ArmsRaceExecutor, _NAME_11, _SLUG_11)
 register(ExploitVsPatchExecutor, _NAME_19, _SLUG_19)
+register(TimeLimitedSiegeExecutor, _NAME_20, _SLUG_20)
+from . import advanced as _advanced  # noqa: F401
