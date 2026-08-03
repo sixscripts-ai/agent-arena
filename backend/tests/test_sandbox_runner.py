@@ -87,6 +87,37 @@ def test_format3_exec_escape_marker():
         assert rc == 0
 
 
+def test_run_battle_loop_delegates_to_run_battle():
+    from agent_arena.sandbox.executors.base import Executor
+
+    calls = []
+
+    class Spy(Executor):
+        def run_battle(self, **kw):
+            calls.append(("run_battle", kw["role_to_model"]))
+            return {"m1": 1.0}
+
+    from agent_arena.sandbox.executors import _ENGINE_REGISTRY
+
+    orig = _ENGINE_REGISTRY.get("scripted")
+    _ENGINE_REGISTRY["scripted"] = Spy
+    try:
+        transport = FakeTransport()
+        client = InternalClient(transport)
+        cfg = {"name": "s", "engine": "scripted", "roles": ["a", "b", "judge"]}
+        scores = run_battle_loop(
+            battle_id="b",
+            format_config=cfg,
+            model_ids=["m1", "m2"],
+            client=client,
+        )
+    finally:
+        if orig is not None:
+            _ENGINE_REGISTRY["scripted"] = orig
+    assert scores == {"m1": 1.0}
+    assert calls[0][1] == {"a": "m1", "b": "m2"}
+
+
 def test_scripted_executor_calls_models():
     from agent_arena.sandbox.executors.scripted import ScriptedExecutor
 
