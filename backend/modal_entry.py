@@ -15,6 +15,7 @@ app = modal.App("agent-arena-backend", image=image)
 
 @app.function(
     secrets=[modal.Secret.from_dotenv(str(_BASE_DIR / ".env"))],
+    min_containers=1,
 )
 @modal.concurrent(max_inputs=100)
 @modal.asgi_app()

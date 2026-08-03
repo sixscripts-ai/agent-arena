@@ -5,26 +5,27 @@ import { useAuth } from "@/lib/auth";
 import FormatCard from "@/components/FormatCard";
 
 export default function Home() {
-  const { user, jwt } = useAuth();
+  const { user } = useAuth();
   const [formats, setFormats] = useState<FormatOut[]>([]);
   const [engine, setEngine] = useState<string>("all");
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    let cancelled = false;
     (async () => {
       setLoading(true);
       try {
-        const data = await api.formats(jwt);
-        setFormats(Array.isArray(data) ? data : []);
+        // public — fetch immediately, don't wait for auth/jwt
+        const data = await api.formats(null);
+        if (!cancelled) setFormats(Array.isArray(data) ? data : []);
       } catch {
-        // public now, but fallback
-        try {
-          const data = await api.formats(null);
-          setFormats(Array.isArray(data) ? data : []);
-        } catch {}
-      } finally { setLoading(false); }
+        if (!cancelled) setFormats([]);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
     })();
-  }, [jwt]);
+    return () => { cancelled = true; };
+  }, []);
 
   const engines = useMemo(() => {
     const s = new Set(formats.map(f=>f.engine).filter(Boolean));
