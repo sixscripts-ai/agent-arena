@@ -18,6 +18,12 @@ from .rev_shell_vs_defense import (
     RevShellVsDefenseExecutor,
 )
 
+from .payload_vs_detection import (
+    NAME as _NAME_5,
+    SLUG as _SLUG_5,
+    PayloadVsDetectionExecutor,
+)
+
 FORMAT_EXECUTORS: dict[str, "type[Executor]"] = {}
 
 
@@ -27,3 +33,4 @@ def register(cls: "type[Executor]", name: str, slug: str) -> None:
 
 
 register(RevShellVsDefenseExecutor, _NAME_4, _SLUG_4)
+register(PayloadVsDetectionExecutor, _NAME_5, _SLUG_5)
