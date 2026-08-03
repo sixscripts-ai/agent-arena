@@ -8,6 +8,7 @@ import NewBattle from "@/pages/NewBattle";
 import LiveBattle from "@/pages/LiveBattle";
 import Leaderboard from "@/pages/Leaderboard";
 import History from "@/pages/History";
+import DesignOptions from "@/pages/DesignOptions";
 
 export default function App() {
   return (
@@ -23,6 +24,7 @@ export default function App() {
           <Route path="/battles/:id" element={<LiveBattle />} />
           <Route path="/leaderboard" element={<Leaderboard />} />
           <Route path="/history" element={<History />} />
+          <Route path="/design" element={<DesignOptions />} />
           <Route path="*" element={<div className="p-8 text-center">404 — Not found</div>} />
         </Routes>
       </main>
