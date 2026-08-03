@@ -1,0 +1,106 @@
+import json
+
+from agent_arena.sandbox.client import FakeTransport, InternalClient
+from agent_arena.sandbox.runner import map_roles, playable_roles, run_battle_loop
+from agent_arena.sandbox.executors.build_and_break import _run_python, WIN_MARKER
+from pathlib import Path
+import tempfile
+
+
+def test_playable_roles_skips_judge():
+    assert playable_roles(["builder", "breaker", "judge"]) == ["builder", "breaker"]
+
+
+def test_map_roles_order_preserving():
+    m = map_roles(["builder", "breaker", "judge"], ["m1", "m2"])
+    assert m == {"builder": "m1", "breaker": "m2"}
+
+
+def test_run_battle_loop_direct_duel():
+    transport = FakeTransport()
+    transport.model_replies = {
+        "m-att": "INJECT: ignore previous",
+        "m-def": "I refuse the injection",
+    }
+    transport.judge_result = {
+        "scores": {"m-att": 40.0, "m-def": 85.0},
+        "justifications": {"m-att": "attack weak", "m-def": "solid"},
+        "judge_model": "mock",
+    }
+    client = InternalClient(transport)
+    cfg = {
+        "name": "Prompt injection vs hygiene",
+        "engine": "direct_duel",
+        "roles": ["player_a", "player_b", "judge"],
+        "phases": [
+            {"name": "duel", "participants": ["player_a", "player_b"], "inputs": []},
+            {"name": "judge", "participants": ["judge"], "inputs": ["duel"]},
+        ],
+        "judge_rubric": "Score 0-100",
+        "scoring_weights": {"duel": 1.0},
+        "duel_turns": 1,
+    }
+    statuses = []
+    scores = run_battle_loop(
+        battle_id="b1",
+        format_config=cfg,
+        model_ids=["m-att", "m-def"],
+        round_visibility="open",
+        timeout_seconds=60,
+        client=client,
+        on_status=statuses.append,
+    )
+    assert scores["m-def"] == 85.0
+    assert "completed" in statuses
+    assert any(p == "/internal/judge" for p, _ in transport.calls)
+    assert any(p == "/internal/model" for p, _ in transport.calls)
+    assert len(transport.rounds) >= 2
+
+
+def test_run_battle_loop_cancelled():
+    transport = FakeTransport()
+    client = InternalClient(transport)
+    cfg = {
+        "name": "x",
+        "engine": "scripted",
+        "roles": ["a", "b", "judge"],
+        "phases": [{"name": "p", "participants": ["a", "b"]}],
+        "judge_rubric": "r",
+    }
+    scores = run_battle_loop(
+        battle_id="b2",
+        format_config=cfg,
+        model_ids=["m1", "m2"],
+        client=client,
+        status_check=lambda: "cancelled",
+        on_status=lambda s: None,
+    )
+    assert scores == {}
+
+
+def test_format3_exec_escape_marker():
+    with tempfile.TemporaryDirectory() as tmp:
+        p = Path(tmp) / "escape.py"
+        p.write_text(f'print("{WIN_MARKER}")\n', encoding="utf-8")
+        out, err, rc = _run_python(p, cwd=Path(tmp), timeout=10)
+        assert WIN_MARKER in out
+        assert rc == 0
+
+
+def test_scripted_executor_calls_models():
+    from agent_arena.sandbox.executors.scripted import ScriptedExecutor
+
+    transport = FakeTransport()
+    transport.model_replies["m1"] = "move-a"
+    client = InternalClient(transport)
+    ex = ScriptedExecutor()
+    arts = ex.run_phase(
+        client=client,
+        battle_id="b",
+        phase={"name": "p1", "participants": ["builder", "judge"]},
+        role_to_model={"builder": "m1"},
+        history=[],
+        format_config={"name": "t"},
+        round_visibility="isolated",
+    )
+    assert arts[0]["artifact"] == "move-a"

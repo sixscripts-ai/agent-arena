@@ -1,0 +1,17 @@
+[
+  {
+    "input": "What is the initial Elo rating in Agent Arena?"
+  },
+  {
+    "input": "What K-factor does Agent Arena use for Elo updates?"
+  },
+  {
+    "input": "How does Agent Arena redact secrets in battle artifacts?"
+  },
+  {
+    "input": "Which model is the default battle judge?"
+  },
+  {
+    "input": "How are battle sandboxes isolated?"
+  }
+]
