@@ -49,10 +49,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const u = await getSessionUser();
         if (u) {
           setUser(u as User);
-          const cached = sessionStorage.getItem("arena_jwt");
-          if (cached) setJwt(cached);
-          else await refreshJwt();
+          const token = await refreshJwt();
+          if (!token) setUser(null);
         }
+      } catch {
+        setUser(null);
+        setJwt(null);
+        sessionStorage.removeItem("arena_jwt");
       } finally {
         setLoading(false);
       }
