@@ -11,11 +11,23 @@ from .schemas import ProviderCreate, ProviderHealth, ProviderOut
 router = APIRouter(prefix="/providers", tags=["providers"])
 
 OPENROUTER_BASE = "https://openrouter.ai/api/v1"
+MODAL_KIMI_BASE = "https://aschenbrenerashton--ep-kimi-k3-server.us-west.modal.direct/v1"
 HOST_FREE_ID = "host:openrouter-free"
 
-# Host-paid OpenRouter free-tier models. All share HOST_OPENROUTER_KEY.
-# `host:openrouter-free` is kept as a stable alias for Nemotron (tests + UI default).
+# Multi-backend host catalog. Each entry declares how to resolve credentials.
+# Public list only includes entries whose credentials are present.
 HOST_PROVIDERS: list[dict] = [
+    # --- Modal (Kimi) ---
+    {
+        "id": "host:modal-kimi",
+        "name": "Modal (Kimi-K3)",
+        "base_url": MODAL_KIMI_BASE,
+        "masked_key": "modal-key…",
+        "auth_style": "modal_proxy",
+        "model_name": "moonshotai/Kimi-K3",
+        "cred": "modal_judge",
+    },
+    # --- OpenRouter free tier (HOST_OPENROUTER_KEY) ---
     {
         "id": HOST_FREE_ID,
         "name": "OpenRouter Free (Nemotron Ultra)",
@@ -23,6 +35,7 @@ HOST_PROVIDERS: list[dict] = [
         "masked_key": "sk-or-...free",
         "auth_style": "bearer",
         "model_name": "nvidia/nemotron-3-ultra-550b-a55b:free",
+        "cred": "openrouter",
     },
     {
         "id": "host:or-nemotron-super",
@@ -31,6 +44,7 @@ HOST_PROVIDERS: list[dict] = [
         "masked_key": "sk-or-...free",
         "auth_style": "bearer",
         "model_name": "nvidia/nemotron-3-super-120b-a12b:free",
+        "cred": "openrouter",
     },
     {
         "id": "host:or-nemotron-nano",
@@ -39,14 +53,7 @@ HOST_PROVIDERS: list[dict] = [
         "masked_key": "sk-or-...free",
         "auth_style": "bearer",
         "model_name": "nvidia/nemotron-3-nano-30b-a3b:free",
-    },
-    {
-        "id": "host:or-nemotron-nano-reason",
-        "name": "OpenRouter Free (Nemotron Nano Reasoning)",
-        "base_url": OPENROUTER_BASE,
-        "masked_key": "sk-or-...free",
-        "auth_style": "bearer",
-        "model_name": "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free",
+        "cred": "openrouter",
     },
     {
         "id": "host:or-laguna-s",
@@ -55,14 +62,7 @@ HOST_PROVIDERS: list[dict] = [
         "masked_key": "sk-or-...free",
         "auth_style": "bearer",
         "model_name": "poolside/laguna-s-2.1:free",
-    },
-    {
-        "id": "host:or-laguna-xs",
-        "name": "OpenRouter Free (Laguna XS)",
-        "base_url": OPENROUTER_BASE,
-        "masked_key": "sk-or-...free",
-        "auth_style": "bearer",
-        "model_name": "poolside/laguna-xs-2.1:free",
+        "cred": "openrouter",
     },
     {
         "id": "host:or-gemma-31b",
@@ -71,14 +71,7 @@ HOST_PROVIDERS: list[dict] = [
         "masked_key": "sk-or-...free",
         "auth_style": "bearer",
         "model_name": "google/gemma-4-31b-it:free",
-    },
-    {
-        "id": "host:or-gemma-26b",
-        "name": "OpenRouter Free (Gemma 4 26B)",
-        "base_url": OPENROUTER_BASE,
-        "masked_key": "sk-or-...free",
-        "auth_style": "bearer",
-        "model_name": "google/gemma-4-26b-a4b-it:free",
+        "cred": "openrouter",
     },
     {
         "id": "host:or-gpt-oss-20b",
@@ -87,6 +80,7 @@ HOST_PROVIDERS: list[dict] = [
         "masked_key": "sk-or-...free",
         "auth_style": "bearer",
         "model_name": "openai/gpt-oss-20b:free",
+        "cred": "openrouter",
     },
     {
         "id": "host:or-ling-flash",
@@ -95,14 +89,7 @@ HOST_PROVIDERS: list[dict] = [
         "masked_key": "sk-or-...free",
         "auth_style": "bearer",
         "model_name": "inclusionai/ling-3.0-flash:free",
-    },
-    {
-        "id": "host:or-north-mini-code",
-        "name": "OpenRouter Free (North Mini Code)",
-        "base_url": OPENROUTER_BASE,
-        "masked_key": "sk-or-...free",
-        "auth_style": "bearer",
-        "model_name": "cohere/north-mini-code:free",
+        "cred": "openrouter",
     },
     {
         "id": "host:or-router-free",
@@ -111,15 +98,73 @@ HOST_PROVIDERS: list[dict] = [
         "masked_key": "sk-or-...free",
         "auth_style": "bearer",
         "model_name": "openrouter/free",
+        "cred": "openrouter",
+    },
+    # --- Optional host backends (appear when env key is set) ---
+    {
+        "id": "host:xai-grok",
+        "name": "xAI (Grok)",
+        "base_url": "https://api.x.ai/v1",
+        "masked_key": "xai-…",
+        "auth_style": "bearer",
+        "model_name": "grok-4-1-fast-non-reasoning",
+        "cred": "xai",
+    },
+    {
+        "id": "host:deepseek-chat",
+        "name": "DeepSeek (Chat)",
+        "base_url": "https://api.deepseek.com/v1",
+        "masked_key": "sk-…",
+        "auth_style": "bearer",
+        "model_name": "deepseek-chat",
+        "cred": "deepseek",
+    },
+    {
+        "id": "host:openai-gpt4o-mini",
+        "name": "OpenAI (GPT-4o mini)",
+        "base_url": "https://api.openai.com/v1",
+        "masked_key": "sk-…",
+        "auth_style": "bearer",
+        "model_name": "gpt-4o-mini",
+        "cred": "openai",
     },
 ]
 
-HOST_FREE = HOST_PROVIDERS[0]
+HOST_FREE = next(p for p in HOST_PROVIDERS if p["id"] == HOST_FREE_ID)
 HOST_BY_ID = {p["id"]: p for p in HOST_PROVIDERS}
+_PUBLIC_KEYS = ("id", "name", "base_url", "masked_key", "auth_style", "model_name")
 
 
 def is_host_model(model_id: str) -> bool:
     return model_id in HOST_BY_ID
+
+
+def _cred_material(cred: str) -> str | None:
+    """Return api_key material for a host cred type, or None if unavailable."""
+    s = settings()
+    if cred == "openrouter":
+        return s.get("HOST_OPENROUTER_KEY") or None
+    if cred == "modal_judge":
+        key = s.get("JUDGE_MODAL_KEY") or ""
+        secret = s.get("JUDGE_MODAL_SECRET") or ""
+        if key and secret:
+            return f"{key}:{secret}"
+        return None
+    if cred == "xai":
+        return s.get("HOST_XAI_KEY") or None
+    if cred == "deepseek":
+        return s.get("HOST_DEEPSEEK_KEY") or None
+    if cred == "openai":
+        return s.get("HOST_OPENAI_KEY") or None
+    return None
+
+
+def _host_configured(p: dict) -> bool:
+    return bool(_cred_material(p.get("cred", "")))
+
+
+def configured_host_providers() -> list[dict]:
+    return [{k: p[k] for k in _PUBLIC_KEYS} for p in HOST_PROVIDERS if _host_configured(p)]
 
 
 def _fernet_key() -> bytes:
@@ -178,16 +223,19 @@ def list_providers(user_id: str = Depends(get_current_user)):
                     model_name=d.data.get("model_name", "")).model_dump()
         for d in res.documents
     ]
-    return [dict(p) for p in HOST_PROVIDERS] + items
+    return configured_host_providers() + items
 
 
 def get_model_call_spec(model_id: str, user_id: str) -> tuple[str, str, str, str]:
     """Return (base_url, auth_style, api_key, model_name) for a battle model_id."""
     host = HOST_BY_ID.get(model_id)
     if host is not None:
-        key = settings().get("HOST_OPENROUTER_KEY") or ""
+        key = _cred_material(host.get("cred", ""))
         if not key:
-            raise HTTPException(status_code=500, detail="HOST_OPENROUTER_KEY not configured")
+            raise HTTPException(
+                status_code=500,
+                detail=f"Host credentials not configured for {model_id}",
+            )
         return (
             host["base_url"],
             host["auth_style"],

@@ -14,8 +14,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
-const HOST_A = "host:openrouter-free";
-const HOST_B = "host:or-laguna-s";
+const HOST_A = "host:modal-kimi";
+const HOST_B = "host:openrouter-free";
 
 export default function NewBattlePage() {
   return (

@@ -85,6 +85,11 @@ def test_get_model_call_spec_host_free(monkeypatch):
 
     settings.cache_clear()
     monkeypatch.setenv("HOST_OPENROUTER_KEY", "sk-or-test-key")
+    monkeypatch.setenv("JUDGE_MODAL_KEY", "ak-test")
+    monkeypatch.setenv("JUDGE_MODAL_SECRET", "as-test")
+    monkeypatch.delenv("HOST_XAI_KEY", raising=False)
+    monkeypatch.delenv("HOST_DEEPSEEK_KEY", raising=False)
+    monkeypatch.delenv("HOST_OPENAI_KEY", raising=False)
     settings.cache_clear()
     try:
         base, style, key, model = providers.get_model_call_spec("host:openrouter-free", "any-user")
@@ -95,7 +100,15 @@ def test_get_model_call_spec_host_free(monkeypatch):
         base2, _, key2, model2 = providers.get_model_call_spec("host:or-laguna-s", "any-user")
         assert base2 == base and key2 == key
         assert model2 == "poolside/laguna-s-2.1:free"
-        assert len(providers.HOST_PROVIDERS) >= 8
+        mbase, mstyle, mkey, mmodel = providers.get_model_call_spec("host:modal-kimi", "any-user")
+        assert "modal.direct" in mbase
+        assert mstyle == "modal_proxy"
+        assert mkey == "ak-test:as-test"
+        assert mmodel == "moonshotai/Kimi-K3"
+        listed = providers.configured_host_providers()
+        ids = {p["id"] for p in listed}
+        assert "host:modal-kimi" in ids and "host:openrouter-free" in ids
+        assert "host:xai-grok" not in ids
         assert providers.is_host_model("host:or-gemma-31b")
         assert not providers.is_host_model("user-doc-id")
     finally:
