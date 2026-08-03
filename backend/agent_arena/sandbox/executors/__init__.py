@@ -3,8 +3,9 @@ from .build_and_break import BuildAndBreakExecutor
 from .direct_duel import DirectDuelExecutor
 from .same_target_race import SameTargetRaceExecutor
 from .scripted import ScriptedExecutor
+from .formats import FORMAT_EXECUTORS
 
-_REGISTRY = {
+_ENGINE_REGISTRY = {
     "build_and_break": BuildAndBreakExecutor,
     "same_target_race": SameTargetRaceExecutor,
     "direct_duel": DirectDuelExecutor,
@@ -14,6 +15,15 @@ _REGISTRY = {
 }
 
 
-def get_executor(engine: str):
-    cls = _REGISTRY.get(engine, ScriptedExecutor)
-    return cls()
+def get_executor(format_config: dict):
+    """Resolve a bespoke format executor (name, then slug), else engine fallback."""
+    name = format_config.get("name") or ""
+    cls = FORMAT_EXECUTORS.get(name)
+    if cls is not None:
+        return cls()
+    slug = format_config.get("id") or format_config.get("slug") or ""
+    cls = FORMAT_EXECUTORS.get(slug)
+    if cls is not None:
+        return cls()
+    engine = format_config.get("engine", "scripted")
+    return _ENGINE_REGISTRY.get(engine, ScriptedExecutor)()
