@@ -39,11 +39,71 @@ const PRESETS: Record<
     auth_style: "bearer",
     model_name: "grok-4-1-fast-non-reasoning",
   },
+  meta: {
+    name: "My Meta",
+    base_url: "https://api.llama.com/v1",
+    auth_style: "bearer",
+    model_name: "Llama-4-Maverick-17B-128E-Instruct",
+  },
   deepseek: {
     name: "My DeepSeek",
     base_url: "https://api.deepseek.com/v1",
     auth_style: "bearer",
     model_name: "deepseek-chat",
+  },
+  mistral: {
+    name: "My Mistral",
+    base_url: "https://api.mistral.ai/v1",
+    auth_style: "bearer",
+    model_name: "mistral-large-latest",
+  },
+  merge: {
+    name: "My Merge Gateway",
+    base_url: "https://api-gateway.merge.dev/v1/openai",
+    auth_style: "bearer",
+    model_name: "openai/gpt-4o-mini",
+  },
+  together: {
+    name: "My Together",
+    base_url: "https://api.together.xyz/v1",
+    auth_style: "bearer",
+    model_name: "meta-llama/Llama-3.1-70B-Instruct-Turbo",
+  },
+  fireworks: {
+    name: "My Fireworks",
+    base_url: "https://api.fireworks.ai/inference/v1",
+    auth_style: "bearer",
+    model_name: "accounts/fireworks/models/llama-v3p1-70b-instruct",
+  },
+  deepinfra: {
+    name: "My DeepInfra",
+    base_url: "https://api.deepinfra.com/v1/openai",
+    auth_style: "bearer",
+    model_name: "meta-llama/Llama-3.3-70B-Instruct",
+  },
+  perplexity: {
+    name: "My Perplexity",
+    base_url: "https://api.perplexity.ai",
+    auth_style: "bearer",
+    model_name: "sonar-pro",
+  },
+  tokenrouter: {
+    name: "My TokenRouter",
+    base_url: "https://api.tokenrouter.com/v1",
+    auth_style: "bearer",
+    model_name: "gpt-4o-mini",
+  },
+  groq: {
+    name: "My Groq",
+    base_url: "https://api.groq.com/openai/v1",
+    auth_style: "bearer",
+    model_name: "llama-3.3-70b-versatile",
+  },
+  cerebras: {
+    name: "My Cerebras",
+    base_url: "https://api.cerebras.ai/v1",
+    auth_style: "bearer",
+    model_name: "llama3.1-70b",
   },
 };
 
@@ -226,8 +286,18 @@ export default function ProvidersPage() {
               >
                 <option value="openai">OpenAI</option>
                 <option value="openrouter">OpenRouter</option>
+                <option value="meta">Meta (Llama API)</option>
+                <option value="mistral">Mistral</option>
+                <option value="together">Together</option>
+                <option value="fireworks">Fireworks</option>
+                <option value="deepinfra">DeepInfra</option>
+                <option value="perplexity">Perplexity</option>
+                <option value="merge">Merge Gateway</option>
+                <option value="tokenrouter">TokenRouter</option>
+                <option value="groq">Groq</option>
                 <option value="xai">xAI (Grok)</option>
                 <option value="deepseek">DeepSeek</option>
+                <option value="cerebras">Cerebras</option>
                 <option value="custom">Custom</option>
               </select>
             </div>
