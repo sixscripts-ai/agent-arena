@@ -14,7 +14,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
-const HOST_FREE = "host:openrouter-free";
+const HOST_A = "host:openrouter-free";
+const HOST_B = "host:or-laguna-s";
 
 export default function NewBattlePage() {
   return (
@@ -31,7 +32,7 @@ function NewBattleForm() {
   const [formats, setFormats] = useState<FormatOut[]>([]);
   const [providers, setProviders] = useState<ProviderOut[]>([]);
   const [formatId, setFormatId] = useState(params.get("format") || "");
-  const [selected, setSelected] = useState<string[]>([HOST_FREE, HOST_FREE]);
+  const [selected, setSelected] = useState<string[]>([HOST_A, HOST_B]);
   const [timeoutSec, setTimeoutSec] = useState(600);
   const [visibility, setVisibility] = useState<"isolated" | "open">("isolated");
   const [save, setSave] = useState(false);
@@ -50,6 +51,12 @@ function NewBattleForm() {
         setFormats(f);
         setProviders(p);
         if (!formatId && f[0]) setFormatId(f[0].id);
+        setSelected((prev) => {
+          const ids = p.map((x) => x.id);
+          if (!ids.length) return prev;
+          const next = prev.map((id, i) => (ids.includes(id) ? id : ids[Math.min(i, ids.length - 1)]));
+          return next;
+        });
       } catch (e) {
         setError(e instanceof Error ? e.message : "Load failed");
       }
@@ -61,11 +68,13 @@ function NewBattleForm() {
 
   useEffect(() => {
     setSelected((prev) => {
+      const fallback = providers[0]?.id || HOST_A;
+      const alt = providers[1]?.id || HOST_B;
       const next = prev.slice(0, need);
-      while (next.length < need) next.push(HOST_FREE);
+      while (next.length < need) next.push(next.length === 1 ? alt : fallback);
       return next;
     });
-  }, [need]);
+  }, [need, providers]);
 
   const modelOptions = useMemo(() => {
     return providers.map((p) => ({ id: p.id, label: `${p.name} (${p.model_name})` }));

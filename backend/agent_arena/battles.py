@@ -8,7 +8,7 @@ from sse_starlette.sse import EventSourceResponse
 
 from . import db, event_bus, mock_runner, sandbox_launcher
 from .auth import get_current_user
-from .providers import HOST_FREE_ID
+from .providers import is_host_model
 from .schemas import BattleCreate
 
 router = APIRouter(prefix="/battles", tags=["battles"])
@@ -22,7 +22,7 @@ def _playable_roles(format_config: dict) -> list[str]:
 
 def _validate_model_ids(databases, database_id: str, user_id: str, model_ids: list[str]) -> None:
     for mid in model_ids:
-        if mid == HOST_FREE_ID:
+        if is_host_model(mid):
             continue
         try:
             doc = databases.get_document(database_id, "providers", mid)
@@ -74,7 +74,7 @@ def create_battle(body: BattleCreate,
     if body.arena_size != len(body.model_ids):
         raise HTTPException(status_code=400, detail="arena_size must equal len(model_ids)")
     _validate_model_ids(databases, database_id, user_id, body.model_ids)
-    if body.judge_provider_id and body.judge_provider_id != HOST_FREE_ID:
+    if body.judge_provider_id and not is_host_model(body.judge_provider_id):
         _validate_model_ids(databases, database_id, user_id, [body.judge_provider_id])
     if active_battle_count(databases, database_id, user_id) >= MAX_ACTIVE_BATTLES:
         raise HTTPException(status_code=429,

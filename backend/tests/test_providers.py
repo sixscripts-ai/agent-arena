@@ -92,6 +92,12 @@ def test_get_model_call_spec_host_free(monkeypatch):
         assert style == "bearer"
         assert key == "sk-or-test-key"
         assert model == "nvidia/nemotron-3-ultra-550b-a55b:free"
+        base2, _, key2, model2 = providers.get_model_call_spec("host:or-laguna-s", "any-user")
+        assert base2 == base and key2 == key
+        assert model2 == "poolside/laguna-s-2.1:free"
+        assert len(providers.HOST_PROVIDERS) >= 8
+        assert providers.is_host_model("host:or-gemma-31b")
+        assert not providers.is_host_model("user-doc-id")
     finally:
         settings.cache_clear()
 

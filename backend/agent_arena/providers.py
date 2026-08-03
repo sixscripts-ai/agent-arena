@@ -10,15 +10,116 @@ from .schemas import ProviderCreate, ProviderHealth, ProviderOut
 
 router = APIRouter(prefix="/providers", tags=["providers"])
 
+OPENROUTER_BASE = "https://openrouter.ai/api/v1"
 HOST_FREE_ID = "host:openrouter-free"
-HOST_FREE = {
-    "id": HOST_FREE_ID,
-    "name": "OpenRouter Free (Nemotron)",
-    "base_url": "https://openrouter.ai/api/v1",
-    "masked_key": "sk-or-...free",
-    "auth_style": "bearer",
-    "model_name": "nvidia/nemotron-3-ultra-550b-a55b:free",
-}
+
+# Host-paid OpenRouter free-tier models. All share HOST_OPENROUTER_KEY.
+# `host:openrouter-free` is kept as a stable alias for Nemotron (tests + UI default).
+HOST_PROVIDERS: list[dict] = [
+    {
+        "id": HOST_FREE_ID,
+        "name": "OpenRouter Free (Nemotron Ultra)",
+        "base_url": OPENROUTER_BASE,
+        "masked_key": "sk-or-...free",
+        "auth_style": "bearer",
+        "model_name": "nvidia/nemotron-3-ultra-550b-a55b:free",
+    },
+    {
+        "id": "host:or-nemotron-super",
+        "name": "OpenRouter Free (Nemotron Super)",
+        "base_url": OPENROUTER_BASE,
+        "masked_key": "sk-or-...free",
+        "auth_style": "bearer",
+        "model_name": "nvidia/nemotron-3-super-120b-a12b:free",
+    },
+    {
+        "id": "host:or-nemotron-nano",
+        "name": "OpenRouter Free (Nemotron Nano)",
+        "base_url": OPENROUTER_BASE,
+        "masked_key": "sk-or-...free",
+        "auth_style": "bearer",
+        "model_name": "nvidia/nemotron-3-nano-30b-a3b:free",
+    },
+    {
+        "id": "host:or-nemotron-nano-reason",
+        "name": "OpenRouter Free (Nemotron Nano Reasoning)",
+        "base_url": OPENROUTER_BASE,
+        "masked_key": "sk-or-...free",
+        "auth_style": "bearer",
+        "model_name": "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free",
+    },
+    {
+        "id": "host:or-laguna-s",
+        "name": "OpenRouter Free (Laguna S)",
+        "base_url": OPENROUTER_BASE,
+        "masked_key": "sk-or-...free",
+        "auth_style": "bearer",
+        "model_name": "poolside/laguna-s-2.1:free",
+    },
+    {
+        "id": "host:or-laguna-xs",
+        "name": "OpenRouter Free (Laguna XS)",
+        "base_url": OPENROUTER_BASE,
+        "masked_key": "sk-or-...free",
+        "auth_style": "bearer",
+        "model_name": "poolside/laguna-xs-2.1:free",
+    },
+    {
+        "id": "host:or-gemma-31b",
+        "name": "OpenRouter Free (Gemma 4 31B)",
+        "base_url": OPENROUTER_BASE,
+        "masked_key": "sk-or-...free",
+        "auth_style": "bearer",
+        "model_name": "google/gemma-4-31b-it:free",
+    },
+    {
+        "id": "host:or-gemma-26b",
+        "name": "OpenRouter Free (Gemma 4 26B)",
+        "base_url": OPENROUTER_BASE,
+        "masked_key": "sk-or-...free",
+        "auth_style": "bearer",
+        "model_name": "google/gemma-4-26b-a4b-it:free",
+    },
+    {
+        "id": "host:or-gpt-oss-20b",
+        "name": "OpenRouter Free (GPT-OSS 20B)",
+        "base_url": OPENROUTER_BASE,
+        "masked_key": "sk-or-...free",
+        "auth_style": "bearer",
+        "model_name": "openai/gpt-oss-20b:free",
+    },
+    {
+        "id": "host:or-ling-flash",
+        "name": "OpenRouter Free (Ling 3 Flash)",
+        "base_url": OPENROUTER_BASE,
+        "masked_key": "sk-or-...free",
+        "auth_style": "bearer",
+        "model_name": "inclusionai/ling-3.0-flash:free",
+    },
+    {
+        "id": "host:or-north-mini-code",
+        "name": "OpenRouter Free (North Mini Code)",
+        "base_url": OPENROUTER_BASE,
+        "masked_key": "sk-or-...free",
+        "auth_style": "bearer",
+        "model_name": "cohere/north-mini-code:free",
+    },
+    {
+        "id": "host:or-router-free",
+        "name": "OpenRouter Free (Auto)",
+        "base_url": OPENROUTER_BASE,
+        "masked_key": "sk-or-...free",
+        "auth_style": "bearer",
+        "model_name": "openrouter/free",
+    },
+]
+
+HOST_FREE = HOST_PROVIDERS[0]
+HOST_BY_ID = {p["id"]: p for p in HOST_PROVIDERS}
+
+
+def is_host_model(model_id: str) -> bool:
+    return model_id in HOST_BY_ID
 
 
 def _fernet_key() -> bytes:
@@ -77,21 +178,21 @@ def list_providers(user_id: str = Depends(get_current_user)):
                     model_name=d.data.get("model_name", "")).model_dump()
         for d in res.documents
     ]
-    items.insert(0, dict(HOST_FREE))
-    return items
+    return [dict(p) for p in HOST_PROVIDERS] + items
 
 
 def get_model_call_spec(model_id: str, user_id: str) -> tuple[str, str, str, str]:
     """Return (base_url, auth_style, api_key, model_name) for a battle model_id."""
-    if model_id == HOST_FREE_ID:
+    host = HOST_BY_ID.get(model_id)
+    if host is not None:
         key = settings().get("HOST_OPENROUTER_KEY") or ""
         if not key:
             raise HTTPException(status_code=500, detail="HOST_OPENROUTER_KEY not configured")
         return (
-            HOST_FREE["base_url"],
-            HOST_FREE["auth_style"],
+            host["base_url"],
+            host["auth_style"],
             key,
-            HOST_FREE["model_name"],
+            host["model_name"],
         )
     databases = db.get_databases()
     database_id = db.get_database_id()

@@ -71,7 +71,7 @@ export default function ProvidersPage() {
       <div className="space-y-4">
         <h1 className="text-2xl font-semibold">Providers</h1>
         <p className="text-sm text-zinc-400">
-          Keys stay encrypted on the backend. Host free model is always available.
+          Keys stay encrypted on the backend. Host OpenRouter free models are always listed first.
         </p>
         <div className="space-y-3">
           {items.map((p) => (
