@@ -1,0 +1,133 @@
+@import url('https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --paper: #FAF6F0;
+  --ink: #0A0A0A;
+  --vermillion: #FF3B30;
+  --blueprint: #0A84FF;
+  --success: #00A676;
+  font-family: "Geist", system-ui, sans-serif;
+  line-height: 1.5;
+  font-weight: 400;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+* {
+  font-variant-ligatures: common-ligatures;
+}
+
+body {
+  background: var(--paper);
+  color: var(--ink);
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+::selection {
+  background: var(--ink);
+  color: var(--paper);
+}
+
+/* Brutalist scrollbar */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-track {
+  background: var(--paper);
+  border-left: 1px solid var(--ink);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--ink);
+  border: 1px solid var(--paper);
+}
+
+/* Focus */
+*:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 2px;
+}
+
+/* Mono for code */
+.mono {
+  font-family: "Geist Mono", "JetBrains Mono", monospace;
+}
+
+/* Display serif */
+.display {
+  font-family: "Instrument Serif", "Newsreader", serif;
+  letter-spacing: -0.03em;
+  font-weight: 400;
+}
+
+/* Brutalist button hover invert */
+.btn-brutal {
+  border: 1.5px solid var(--ink);
+  background: var(--paper);
+  color: var(--ink);
+  transition: all 0.15s cubic-bezier(0.4, 0, 0.6, 1);
+}
+.btn-brutal:hover {
+  background: var(--ink);
+  color: var(--paper);
+  transform: translate(-1px, -1px);
+  box-shadow: 3px 3px 0px 0px var(--ink);
+}
+.btn-brutal:active {
+  transform: translate(1px, 1px);
+  box-shadow: none;
+}
+
+.btn-vermillion {
+  background: var(--vermillion);
+  color: white;
+  border: 1.5px solid var(--ink);
+}
+.btn-vermillion:hover {
+  background: var(--ink);
+  color: var(--paper);
+}
+
+/* Card brutal */
+.card-brutal {
+  border: 1.5px solid var(--ink);
+  background: var(--paper);
+  box-shadow: 4px 4px 0px 0px var(--ink);
+}
+
+/* Code pane */
+.code-pane {
+  background: #0A0A0A;
+  color: #E5E5E5;
+  border: 1.5px solid #0A0A0A;
+}
+
+/* Line numbers */
+.line-numbers {
+  background: #141414;
+  border-right: 1px solid #222;
+  color: #555;
+  user-select: none;
+}
+
+/* Animations */
+@keyframes shimmer {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+
+@keyframes blink {
+  0%, 50% { opacity: 1; }
+  51%, 100% { opacity: 0; }
+}
+
+.cursor-blink {
+  animation: blink 1s steps(1) infinite;
+}

@@ -1,43 +1,57 @@
-# Agent Arena Frontend
+# React + TypeScript + Vite
 
-Next.js App Router UI for Agent Arena. Auth via Appwrite; battles/providers/leaderboard via Modal FastAPI.
+This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
 
-## Env
+Currently, two official plugins are available:
 
-Copy `.env.example` → `.env.local`:
+- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) for Fast Refresh
+- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
 
-```
-NEXT_PUBLIC_APPWRITE_ENDPOINT=https://sfo.cloud.appwrite.io/v1
-NEXT_PUBLIC_APPWRITE_PROJECT_ID=<project>
-NEXT_PUBLIC_MODAL_URL=https://aschenbrenerashton--agent-arena-backend-fastapi-app.modal.run
-```
+## Expanding the ESLint configuration
 
-## Appwrite platforms
+If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
 
-In the Appwrite console (project Integrations → Platforms), add Web platforms for:
-
-- `localhost`
-- your Vercel production host (e.g. `agent-arena-blond.vercel.app`)
-- `*.vercel.app` for previews
-
-Without these, browser signup/login/JWT will fail CORS / origin checks.
-
-## BYOK flow
-
-1. Sign up / log in
-2. **Providers** → pick a preset (OpenAI, OpenRouter, xAI, DeepSeek) → paste API key → **Test key** → **Save**
-3. **New Battle** → model slots show **Host models** and **Your providers** optgroups
-4. Optional judge override; Start battle → live SSE on `/battles/[id]`
-
-Host models (Modal Kimi, OpenRouter free, …) need no user key. Your keys are Fernet-encrypted on the backend.
-
-## Dev
-
-```bash
-npm install
-npm run dev
+```js
+export default tseslint.config({
+  extends: [
+    // Remove ...tseslint.configs.recommended and replace with this
+    ...tseslint.configs.recommendedTypeChecked,
+    // Alternatively, use this for stricter rules
+    ...tseslint.configs.strictTypeChecked,
+    // Optionally, add this for stylistic rules
+    ...tseslint.configs.stylisticTypeChecked,
+  ],
+  languageOptions: {
+    // other options...
+    parserOptions: {
+      project: ['./tsconfig.node.json', './tsconfig.app.json'],
+      tsconfigRootDir: import.meta.dirname,
+    },
+  },
+})
 ```
 
-## Deploy
+You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
 
-Vercel project root: `frontend/`. Set the three `NEXT_PUBLIC_*` env vars for Production/Preview.
+```js
+// eslint.config.js
+import reactX from 'eslint-plugin-react-x'
+import reactDom from 'eslint-plugin-react-dom'
+
+export default tseslint.config({
+  extends: [
+    // other configs...
+    // Enable lint rules for React
+    reactX.configs['recommended-typescript'],
+    // Enable lint rules for React DOM
+    reactDom.configs.recommended,
+  ],
+  languageOptions: {
+    // other options...
+    parserOptions: {
+      project: ['./tsconfig.node.json', './tsconfig.app.json'],
+      tsconfigRootDir: import.meta.dirname,
+    },
+  },
+})
+```
