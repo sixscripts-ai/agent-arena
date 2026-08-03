@@ -48,7 +48,7 @@ def test_base_run_battle_runs_phase_loop_and_returns_scores():
     client = InternalClient(transport)
     cfg = {
         "name": "t",
-        "engine": "direct_duel",
+        "engine": "scripted",
         "roles": ["player_a", "player_b", "judge"],
         "phases": [{"name": "p1", "participants": ["player_a"]}],
         "judge_rubric": "r",

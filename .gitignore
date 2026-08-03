@@ -1,6 +1,8 @@
 .env
 .env.*
 !.env.example
+# agentmemory iii-engine store (cwd-relative: ./data)
+data/
 node_modules/
 .venv/
 __pycache__/

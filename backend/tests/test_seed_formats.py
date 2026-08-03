@@ -5,11 +5,11 @@ from agent_arena.seed_formats import (
 )
 
 
-def test_exactly_twenty_five_formats():
-    assert len(FORMAT_DEFINITIONS) == 25
+def test_exactly_fourteen_formats():
+    assert len(FORMAT_DEFINITIONS) == 14
 
 
-def test_all_six_engines_covered():
+def test_all_three_engines_covered():
     engines = {eng for _, eng, _ in FORMAT_DEFINITIONS}
     assert engines == set(ENGINE_TEMPLATES)
 
@@ -17,21 +17,23 @@ def test_all_six_engines_covered():
 def test_flag_ship_names_present():
     names = {name for name, _, _ in FORMAT_DEFINITIONS}
     assert "WAF builder vs bypasser" in names
-    assert "Two-agent duel" in names
+    assert "Arms race" in names
 
 
 def test_user_selected_names_present():
     names = {name for name, _, _ in FORMAT_DEFINITIONS}
-    assert "Pwn exploit race" in names
+    assert "Payload generator vs detection" in names
     assert "Same-defense adaptive attacks" in names
 
 
 def test_build_format_shape():
     cfg = build_format(
-        "Code review duel", "same_target_race", "Two reviewers on one target"
+        "Credential hunt",
+        "build_and_break",
+        "Builder hides credentials; hunter finds them",
     )
-    assert cfg["id"] == "code-review-duel"
-    assert cfg["engine"] == "same_target_race"
+    assert cfg["id"] == "credential-hunt"
+    assert cfg["engine"] == "build_and_break"
     assert cfg["sandbox_image"] == "python:3.11-slim"
     assert cfg["timeout_seconds"] == 600
     assert cfg["round_visibility"] == "isolated"

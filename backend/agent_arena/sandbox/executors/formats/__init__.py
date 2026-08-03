@@ -83,4 +83,3 @@ register(ExploitVsPatchExecutor, _NAME_19, _SLUG_19)
 register(TimeLimitedSiegeExecutor, _NAME_20, _SLUG_20)
 register(DigitalTwinExecutor, _NAME_21, _SLUG_21)
 register(SameDefenseAdaptiveExecutor, _NAME_25, _SLUG_25)
-from . import advanced as _advanced  # noqa: F401

@@ -16,7 +16,7 @@ def test_map_roles_order_preserving():
     assert m == {"builder": "m1", "breaker": "m2"}
 
 
-def test_run_battle_loop_direct_duel():
+def test_run_battle_loop_scripted():
     transport = FakeTransport()
     transport.model_replies = {
         "m-att": "INJECT: ignore previous",
@@ -30,7 +30,7 @@ def test_run_battle_loop_direct_duel():
     client = InternalClient(transport)
     cfg = {
         "name": "Prompt injection vs hygiene",
-        "engine": "direct_duel",
+        "engine": "scripted",
         "roles": ["player_a", "player_b", "judge"],
         "phases": [
             {"name": "duel", "participants": ["player_a", "player_b"], "inputs": []},

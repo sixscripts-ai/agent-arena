@@ -1,4 +1,5 @@
 """Host-owned Kimi-K3 judge with retry, guarded JSON parse, and redaction."""
+
 from __future__ import annotations
 
 import json
@@ -13,7 +14,9 @@ from .config import settings
 from .redact import sanitize_artifact
 
 DEFAULT_JUDGE_MODEL = "moonshotai/Kimi-K3"
-DEFAULT_JUDGE_BASE = "https://aschenbrenerashton--ep-kimi-k3-server.us-west.modal.direct/v1"
+DEFAULT_JUDGE_BASE = (
+    "https://aschenbrenerashton--ep-kimi-k3-server.us-west.modal.direct/v1"
+)
 SCORE_MIN, SCORE_MAX = 0.0, 100.0
 MAX_ATTEMPTS = 3
 
@@ -99,7 +102,7 @@ def judge_battle(
                 api_key=api_key,
                 model=model,
                 messages=messages,
-                max_tokens=1024,
+                max_tokens=8192,
                 temperature=0.1,
                 response_format={"type": "json_object"},
             )
@@ -120,5 +123,7 @@ def judge_battle(
             }
         except Exception as exc:  # noqa: BLE001 — retry then fail battle
             last_err = exc
-            time.sleep(0.5 * (2 ** attempt))
-    raise HTTPException(status_code=502, detail=f"Judge failed after retries: {last_err}")
+            time.sleep(0.5 * (2**attempt))
+    raise HTTPException(
+        status_code=502, detail=f"Judge failed after retries: {last_err}"
+    )

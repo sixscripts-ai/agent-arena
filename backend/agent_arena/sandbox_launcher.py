@@ -1,4 +1,5 @@
 """Start a battle: prefer Modal Sandbox; fall back to in-process runner."""
+
 from __future__ import annotations
 
 import json
@@ -22,7 +23,9 @@ def _load_battle(battle_id: str):
     databases = db.get_databases()
     database_id = db.get_database_id()
     battle = databases.get_document(database_id, "battles", battle_id)
-    format_doc = databases.get_document(database_id, "formats", battle.data["format_id"])
+    format_doc = databases.get_document(
+        database_id, "formats", battle.data["format_id"]
+    )
     cfg = json.loads(format_doc.data["config"])
     return databases, database_id, battle, cfg
 
@@ -102,11 +105,19 @@ def _run_direct(battle_id, databases, database_id, battle, cfg) -> None:
             return {"content": content}
         if path == "/internal/judge":
             try:
+                call_spec = None
+                jpid = battle.data.get("judge_provider_id")
+                if jpid:
+                    try:
+                        call_spec = get_model_call_spec(jpid, battle.data["user_id"])
+                    except Exception:
+                        call_spec = None  # fall back to host Kimi-K3
                 return judge_mod.judge_battle(
                     model_ids=list(battle.data["model_ids"]),
                     artifacts=body.get("artifacts") or [],
                     rubric=body.get("rubric") or "score",
                     weights=body.get("weights"),
+                    call_spec=call_spec,
                 )
             except Exception:
                 mids = list(battle.data["model_ids"])
@@ -118,20 +129,28 @@ def _run_direct(battle_id, databases, database_id, battle, cfg) -> None:
                 }
         if path == "/internal/round":
             art = sanitize_artifact(body.get("artifact", ""))
-            databases.create_document(database_id, "rounds", "unique()", {
-                "battle_id": battle_id,
-                "phase": body.get("phase", ""),
-                "model_id": body.get("model_id", ""),
-                "artifact": art,
-            })
-            event_bus.publish(battle_id, {
-                "type": body.get("event_type", "artifact"),
-                "data": {
-                    "phase": body.get("phase"),
-                    "model_id": body.get("model_id"),
+            databases.create_document(
+                database_id,
+                "rounds",
+                "unique()",
+                {
+                    "battle_id": battle_id,
+                    "phase": body.get("phase", ""),
+                    "model_id": body.get("model_id", ""),
                     "artifact": art,
                 },
-            })
+            )
+            event_bus.publish(
+                battle_id,
+                {
+                    "type": body.get("event_type", "artifact"),
+                    "data": {
+                        "phase": body.get("phase"),
+                        "model_id": body.get("model_id"),
+                        "artifact": art,
+                    },
+                },
+            )
             return {"ok": True}
         raise RuntimeError(path)
 
@@ -171,13 +190,18 @@ def _finalize_scores(databases, database_id, battle_id, battle, scores) -> None:
     from . import leaderboard
 
     for mid, value in scores.items():
-        databases.create_document(database_id, "scores", "unique()", {
-            "battle_id": battle_id,
-            "model_id": mid,
-            "score": float(value),
-            "judge_model": "host-judge",
-            "justification": "judged",
-        })
+        databases.create_document(
+            database_id,
+            "scores",
+            "unique()",
+            {
+                "battle_id": battle_id,
+                "model_id": mid,
+                "score": float(value),
+                "judge_model": "host-judge",
+                "justification": "judged",
+            },
+        )
     try:
         leaderboard.apply_result(
             databases,
@@ -206,23 +230,24 @@ def try_spawn_modal_sandbox(battle_id: str) -> str | None:
             .pip_install("httpx")
             .add_local_python_source("agent_arena")
         )
-        secret = modal.Secret.from_dict({
-            "INTERNAL_API_KEY": key,
-            "BACKEND_PUBLIC_URL": _backend_public_url(),
-        })
+        secret = modal.Secret.from_dict(
+            {
+                "INTERNAL_API_KEY": key,
+                "BACKEND_PUBLIC_URL": _backend_public_url(),
+            }
+        )
         sb = modal.Sandbox.create(
             "python",
             "-c",
-            (
-                "from agent_arena.sandbox.entrypoint import main; "
-                f"main({battle_id!r})"
-            ),
+            (f"from agent_arena.sandbox.entrypoint import main; main({battle_id!r})"),
             image=image,
             secrets=[secret],
             timeout=int(os.environ.get("SANDBOX_TIMEOUT", "900")),
             app=app,
         )
-        return getattr(sb, "object_id", None) or getattr(sb, "sandbox_id", None) or str(sb)
+        return (
+            getattr(sb, "object_id", None) or getattr(sb, "sandbox_id", None) or str(sb)
+        )
     except Exception:
         return None
 
@@ -236,7 +261,10 @@ def start_battle(battle_id: str) -> None:
             try:
                 databases = db.get_databases()
                 databases.update_document(
-                    db.get_database_id(), "battles", battle_id, {"sandbox_id": sandbox_id}
+                    db.get_database_id(),
+                    "battles",
+                    battle_id,
+                    {"sandbox_id": sandbox_id},
                 )
             except Exception:
                 pass
@@ -251,6 +279,7 @@ def stop_sandbox(sandbox_id: str) -> None:
         return
     try:
         import modal
+
         sb = modal.Sandbox.from_id(sandbox_id)
         sb.terminate()
     except Exception:
