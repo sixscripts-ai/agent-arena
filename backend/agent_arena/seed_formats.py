@@ -47,6 +47,14 @@ ENGINE_TEMPLATES = {
         ],
         "scoring_weights": {"phase1": 0.2, "phase2": 0.3, "phase3": 0.5},
     },
+    "agent_tool_race": {
+        "roles": ["player_a", "player_b", "judge"],
+        "phases": [
+            {"name": "race", "participants": ["player_a", "player_b"], "inputs": []},
+            {"name": "judge", "participants": ["judge"], "inputs": ["race"]},
+        ],
+        "scoring_weights": {"race": 1.0},
+    },
 }
 
 RUBRICS = {
@@ -59,6 +67,11 @@ RUBRICS = {
         "Award each side 0-100."
     ),
     "high_complexity": "Judge multi-phase execution quality, adaptability, and final state. Award each side 0-100.",
+    "agent_tool_race": (
+        "Judge correctness vs the shared TARGET.md, test coverage (TEST_PASS), efficiency (steps_used), "
+        "workspace state (files, THEORY.md), and competitive skill draft: 20 skills pool, pick 5 to beat opponent. "
+        "Award each side 0-100. Consider THEORY.md explaining technique to counter opponent."
+    ),
 }
 
 FORMAT_DEFINITIONS = [
@@ -127,6 +140,11 @@ FORMAT_DEFINITIONS = [
         "Same-defense adaptive attacks",
         "high_complexity",
         "Same defense, adaptively re-attacked across phases.",
+    ),
+    (
+        "Tool-using coding race",
+        "agent_tool_race",
+        "Both agents race to solve a shared coding target using filesystem, python exec, and test-runner tools. Pick 5 of 20 skills to beat opponent.",
     ),
 ]
 
@@ -261,6 +279,30 @@ FORMAT_EXTRA: dict[str, dict] = {
         "exec_timeout_seconds": 120,
         "rounds": 3,
         "outcome_markers": ["SUCCESS", "FAIL"],
+    },
+    "Tool-using coding race": {
+        "target_code": "# TASK: Fix is_palindrome to be case-insensitive and ignore non-alphanumeric\n"
+        "def is_palindrome(s: str) -> bool:\n"
+        "    # buggy: case-sensitive and does not ignore non-alnum\n"
+        "    return s == s[::-1]\n"
+        "\n"
+        "def test_is_palindrome():\n"
+        '    assert is_palindrome("racecar") == True\n'
+        '    assert is_palindrome("Racecar") == True\n'
+        '    assert is_palindrome("A man, a plan, a canal: Panama") == True\n'
+        '    assert is_palindrome("hello") == False\n'
+        '    print("TEST_PASS")\n'
+        "\n"
+        'if __name__ == "__main__":\n'
+        "    test_is_palindrome()\n",
+        "max_tool_turns": 6,
+        "max_tool_steps": 14,
+        "tool_timeout": 20,
+        "exec_timeout_seconds": 240,
+        "outcome_markers": ["DONE", "TEST_PASS", "TEST_FAIL", "STEP_BUDGET_EXCEEDED"],
+        "skill_pool_size": 20,
+        "pick_per_battle": 5,
+        "competitive": True,
     },
 }
 

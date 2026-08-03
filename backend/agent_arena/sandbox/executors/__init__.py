@@ -1,3 +1,4 @@
+from .advanced_executor import AdvancedExecutor
 from .build_and_break import BuildAndBreakExecutor
 from .scripted import ScriptedExecutor
 from .formats import FORMAT_EXECUTORS
@@ -6,6 +7,7 @@ _ENGINE_REGISTRY = {
     "build_and_break": BuildAndBreakExecutor,
     "script_vs_defense": ScriptedExecutor,
     "high_complexity": ScriptedExecutor,
+    "agent_tool_race": AdvancedExecutor,
 }
 
 

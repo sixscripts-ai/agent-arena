@@ -68,7 +68,23 @@ export default function LiveBattle() {
             }
             if (ev.event === "scores") {
               const sc = d?.scores || (ev.data as any)?.scores;
-              if (sc) setScores(sc);
+              if (sc) {
+                setScores(sc);
+              } else {
+                // real executors emit scores inside artifact JSON string {"scores":{...}}
+                try {
+                  const art = d?.artifact || (ev.data as any)?.artifact;
+                  if (art) {
+                    const parsed = typeof art === "string" ? JSON.parse(art) : art;
+                    if (parsed.scores) setScores(parsed.scores);
+                    // also handle nested artifact that is EXECUTOR_RESULT but contains scores?
+                    if (parsed && typeof parsed === "object" && (parsed as any).data) {
+                      const inner = (parsed as any).data;
+                      if (inner.scores) setScores(inner.scores);
+                    }
+                  }
+                } catch {}
+              }
             }
           },
           ac.signal

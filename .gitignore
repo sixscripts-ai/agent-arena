@@ -42,3 +42,5 @@ AGENTS.md
 .kilo/plans/
 .kilo/reports/
 .kilo/package-lock.json
+.superpowers/
+docs/superpowers/plans/

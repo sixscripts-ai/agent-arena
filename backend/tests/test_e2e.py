@@ -15,7 +15,7 @@ def test_full_battle_lifecycle(client):
     try:
         formats = client.get("/formats")
         assert formats.status_code == 200
-        assert len(formats.json()) == 14
+        assert len(formats.json()) == 15
         fmt = formats.json()[0]["id"]
         assert fmt, "GET /formats must return a usable format id"
         assert (
