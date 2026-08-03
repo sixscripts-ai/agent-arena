@@ -64,6 +64,9 @@ def model_code(client, battle_id, model_id, phase, messages) -> str:
 def write_assets(workdir: Path, assets: dict[str, str]) -> None:
     for relpath, content in assets.items():
         p = workdir / relpath
+        if relpath.endswith("/"):
+            p.mkdir(parents=True, exist_ok=True)
+            continue
         p.parent.mkdir(parents=True, exist_ok=True)
         p.write_text(content, encoding="utf-8")
 
