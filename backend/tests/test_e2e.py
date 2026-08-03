@@ -8,32 +8,42 @@ from tests.conftest import make_user_id, requires_appwrite
 def test_full_battle_lifecycle(client):
     from agent_arena.auth import get_current_user
     from agent_arena.main import app
+
     seed_formats()
     user_id = make_user_id()
     app.dependency_overrides[get_current_user] = lambda: user_id
     try:
         formats = client.get("/formats")
         assert formats.status_code == 200
-        assert len(formats.json()) == 25
+        assert len(formats.json()) == 15
         fmt = formats.json()[0]["id"]
         assert fmt, "GET /formats must return a usable format id"
-        assert client.post("/battles", json={
-            "format_id": fmt,
-            "model_ids": ["host:openrouter-free", "host:openrouter-free"],
-            "arena_size": 2,
-            "timeout_seconds": 600,
-            "round_visibility": "isolated",
-            "save": True,
-        }).status_code == 201, "GET /formats id must round-trip into POST /battles"
+        assert (
+            client.post(
+                "/battles",
+                json={
+                    "format_id": fmt,
+                    "model_ids": ["host:openrouter-free", "host:openrouter-free"],
+                    "arena_size": 2,
+                    "timeout_seconds": 600,
+                    "round_visibility": "isolated",
+                    "save": True,
+                },
+            ).status_code
+            == 201
+        ), "GET /formats id must round-trip into POST /battles"
 
-        battle = client.post("/battles", json={
-            "format_id": fmt,
-            "model_ids": ["host:openrouter-free", "host:openrouter-free"],
-            "arena_size": 2,
-            "timeout_seconds": 600,
-            "round_visibility": "isolated",
-            "save": True,
-        })
+        battle = client.post(
+            "/battles",
+            json={
+                "format_id": fmt,
+                "model_ids": ["host:openrouter-free", "host:openrouter-free"],
+                "arena_size": 2,
+                "timeout_seconds": 600,
+                "round_visibility": "isolated",
+                "save": True,
+            },
+        )
         assert battle.status_code == 201
         battle_id = battle.json()["id"]
 

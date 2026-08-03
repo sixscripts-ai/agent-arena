@@ -1,4 +1,5 @@
 """Host-owned Kimi-K3 judge with retry, guarded JSON parse, and redaction."""
+
 from __future__ import annotations
 
 import json
@@ -13,7 +14,9 @@ from .config import settings
 from .redact import sanitize_artifact
 
 DEFAULT_JUDGE_MODEL = "moonshotai/Kimi-K3"
-DEFAULT_JUDGE_BASE = "https://aschenbrenerashton--ep-kimi-k3-server.us-west.modal.direct/v1"
+DEFAULT_JUDGE_BASE = (
+    "https://aschenbrenerashton--ep-kimi-k3-server.us-west.modal.direct/v1"
+)
 SCORE_MIN, SCORE_MAX = 0.0, 100.0
 MAX_ATTEMPTS = 3
 
@@ -59,11 +62,77 @@ def _clamp(score: float) -> float:
 
 def _host_judge_spec() -> tuple[str, str, str, str]:
     s = settings()
+    # New Bearer proxy token takes precedence: wk-xxx.ws-yyy (dot)
+    proxy_token = s.get("JUDGE_MODAL_PROXY_TOKEN") or ""
+    if proxy_token:
+        proxy_token = proxy_token.strip()
+        if "." in proxy_token and "wk-" in proxy_token and "ws-" in proxy_token:
+            return DEFAULT_JUDGE_BASE, "modal_proxy", proxy_token, DEFAULT_JUDGE_MODEL
+        if ":" in proxy_token:
+            parts = [p.strip() for p in proxy_token.split(":")]
+            if len(parts) == 2 and parts[0] and parts[1]:
+                return (
+                    DEFAULT_JUDGE_BASE,
+                    "modal_proxy",
+                    proxy_token,
+                    DEFAULT_JUDGE_MODEL,
+                )
+        # incomplete wk- only → fall through to fallback, not old ak/as
+        if proxy_token.startswith("wk-"):
+            pass  # incomplete, try fallback below
+        else:
+            # old ak/as colon pair still valid for some setups
+            if ":" in proxy_token:
+                return (
+                    DEFAULT_JUDGE_BASE,
+                    "modal_proxy",
+                    proxy_token,
+                    DEFAULT_JUDGE_MODEL,
+                )
+    # Fallback chain if Modal proxy not configured / incomplete:
+    # 1) TokenRouter Kimi-K3-Free (user says only this works) -> 2) Groq -> 3) DeepSeek -> 4) OpenRouter Free
+    tr_key = s.get("HOST_TOKENROUTER_KEY") or ""
+    if tr_key:
+        return (
+            "https://api.tokenrouter.com/v1",
+            "bearer",
+            tr_key,
+            "moonshotai/kimi-k3-free",
+        )
+    groq_key = s.get("HOST_GROQ_KEY") or ""
+    if groq_key:
+        return (
+            "https://api.groq.com/openai/v1",
+            "bearer",
+            groq_key,
+            "llama-3.3-70b-versatile",
+        )
+    deep_key = s.get("HOST_DEEPSEEK_KEY") or ""
+    if deep_key:
+        return (
+            "https://api.deepseek.com/v1",
+            "bearer",
+            deep_key,
+            "deepseek-v4-flash",
+        )
+    or_key = s.get("HOST_OPENROUTER_KEY") or ""
+    if or_key:
+        # use a free model that supports json_object reasonably well
+        return (
+            "https://openrouter.ai/api/v1",
+            "bearer",
+            or_key,
+            "nvidia/nemotron-3-nano-30b-a3b:free",
+        )
     key = s.get("JUDGE_MODAL_KEY") or ""
     secret = s.get("JUDGE_MODAL_SECRET") or ""
     if not key or not secret:
-        raise HTTPException(status_code=500, detail="Judge credentials not configured")
-    return DEFAULT_JUDGE_BASE, "modal_proxy", f"{key}:{secret}", DEFAULT_JUDGE_MODEL
+        raise HTTPException(
+            status_code=500,
+            detail="Judge credentials not configured (no proxy token and no HOST_OPENROUTER_KEY fallback)",
+        )
+    combined = f"{key}:{secret}"
+    return DEFAULT_JUDGE_BASE, "modal_proxy", combined, DEFAULT_JUDGE_MODEL
 
 
 def judge_battle(
@@ -99,7 +168,7 @@ def judge_battle(
                 api_key=api_key,
                 model=model,
                 messages=messages,
-                max_tokens=1024,
+                max_tokens=8192,
                 temperature=0.1,
                 response_format={"type": "json_object"},
             )
@@ -120,5 +189,7 @@ def judge_battle(
             }
         except Exception as exc:  # noqa: BLE001 — retry then fail battle
             last_err = exc
-            time.sleep(0.5 * (2 ** attempt))
-    raise HTTPException(status_code=502, detail=f"Judge failed after retries: {last_err}")
+            time.sleep(0.5 * (2**attempt))
+    raise HTTPException(
+        status_code=502, detail=f"Judge failed after retries: {last_err}"
+    )

@@ -37,4 +37,6 @@ def settings() -> dict:
         "INTERNAL_API_KEY": os.environ.get("INTERNAL_API_KEY", ""),
         "JUDGE_MODAL_KEY": os.environ.get("JUDGE_MODAL_KEY", ""),
         "JUDGE_MODAL_SECRET": os.environ.get("JUDGE_MODAL_SECRET", ""),
+        "JUDGE_MODAL_PROXY_TOKEN": os.environ.get("JUDGE_MODAL_PROXY_TOKEN", "")
+        or os.environ.get("MODAL_PROXY_TOKEN", ""),
     }

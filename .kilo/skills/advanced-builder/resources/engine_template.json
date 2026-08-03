@@ -1,0 +1,10 @@
+{
+  "agent_tool_race": {
+    "roles": ["player_a", "player_b", "judge"],
+    "phases": [
+      {"name": "race", "participants": ["player_a", "player_b"], "inputs": []},
+      {"name": "judge", "participants": ["judge"], "inputs": ["race"]}
+    ],
+    "scoring_weights": {"race": 1.0}
+  }
+}

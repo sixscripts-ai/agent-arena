@@ -14,11 +14,9 @@ def _get_json(url: str, headers: dict) -> dict:
 
 
 def main(battle_id: str) -> None:
+    os.environ["ARENA_IN_SANDBOX"] = "1"
     base = os.environ["BACKEND_PUBLIC_URL"].rstrip("/")
     key = os.environ["INTERNAL_API_KEY"]
-    # Fetch battle + format via a tiny bootstrap endpoint isn't available;
-    # runner expects config injected. Use env BATTLE_BOOTSTRAP_JSON if set,
-    # else call public-less internal bootstrap stored in env at spawn time.
     bootstrap = os.environ.get("BATTLE_BOOTSTRAP_JSON")
     if not bootstrap:
         print("missing BATTLE_BOOTSTRAP_JSON", file=sys.stderr)
@@ -32,7 +30,6 @@ def main(battle_id: str) -> None:
 
     def on_status(status: str) -> None:
         statuses.append(status)
-        # best-effort status update via round event
         try:
             client.round(battle_id, "system", "system", status, event_type="battle_status")
         except Exception:

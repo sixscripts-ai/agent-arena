@@ -1,8 +1,8 @@
 from agent_arena.redact import REDACT_PATTERNS, sanitize_artifact
 
 
-def test_four_spec_patterns_present():
-    assert len(REDACT_PATTERNS) == 4
+def test_all_spec_patterns_present():
+    assert len(REDACT_PATTERNS) == 11
     assert "sk-[A-Za-z0-9_-]{16,}" in REDACT_PATTERNS
     assert "wk-[A-Za-z0-9]{20,}" in REDACT_PATTERNS
     assert "ws-[A-Za-z0-9]{20,}" in REDACT_PATTERNS

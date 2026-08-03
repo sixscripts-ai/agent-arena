@@ -118,7 +118,7 @@ HOST_PROVIDERS: list[dict] = [
         "base_url": "https://api.tokenrouter.com/v1",
         "masked_key": "sk-…",
         "auth_style": "bearer",
-        "model_name": "moonshotai/kimi-k3",
+        "model_name": "moonshotai/kimi-k3-free",
         "cred": "tokenrouter",
     },
     {
@@ -334,12 +334,32 @@ def get_model_call_spec(model_id: str, user_id: str) -> tuple[str, str, str, str
 def provider_health(body: ProviderHealth, _user_id: str = Depends(get_current_user)):
     headers = {}
     if body.auth_style == "modal_proxy":
-        parts = [p.strip() for p in body.api_key.split(":")]
-        if len(parts) != 2:
+        api_key = body.api_key.strip()
+        if ":" in api_key:
+            parts = [p.strip() for p in api_key.split(":")]
+            if len(parts) == 2 and parts[0] and parts[1]:
+                headers = {"Modal-Key": parts[0], "Modal-Secret": parts[1]}
+            else:
+                raise HTTPException(
+                    status_code=400,
+                    detail="modal_proxy key must be 'wk-...:ws-...' (colon) or 'wk-....ws-...' (dot)",
+                )
+        elif "." in api_key and "wk-" in api_key and "ws-" in api_key:
+            headers = {"Authorization": f"Bearer {api_key}"}
+        elif api_key.startswith("wk-") and "." not in api_key:
             raise HTTPException(
-                status_code=400, detail="modal_proxy key must be 'wk-...:ws-...'"
+                status_code=400,
+                detail=(
+                    "modal_proxy token incomplete: you provided only wk- part. "
+                    "Modal proxy now requires 'Bearer wk-....ws-...' dot format. "
+                    "Generate a new proxy token in Modal dashboard → Settings → Proxy Auth Tokens."
+                ),
             )
-        headers = {"Modal-Key": parts[0], "Modal-Secret": parts[1]}
+        else:
+            raise HTTPException(
+                status_code=400,
+                detail="modal_proxy key must be 'wk-...:ws-...' (colon) or 'wk-....ws-...' (dot Bearer)",
+            )
     else:
         headers["Authorization"] = f"Bearer {body.api_key}"
     url = body.base_url.rstrip("/") + "/chat/completions"

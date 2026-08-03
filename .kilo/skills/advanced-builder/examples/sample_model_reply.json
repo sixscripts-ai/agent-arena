@@ -1,0 +1,7 @@
+{
+  "reply": "TOOL write path=solution.py\ndef is_palindrome(s):\n    cleaned = ''.join(c.lower() for c in s if c.isalnum())\n    return cleaned == cleaned[::-1]\nEND_TOOL\nTOOL test path=test_is_palindrome.py\nEND_TOOL",
+  "parsed": [
+    {"tool": "write", "path": "solution.py", "content": "def is_palindrome..."},
+    {"tool": "test", "path": "test_is_palindrome.py"}
+  ]
+}
