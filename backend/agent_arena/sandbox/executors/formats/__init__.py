@@ -54,6 +54,12 @@ from .time_limited_siege import (
     TimeLimitedSiegeExecutor,
 )
 
+from .digital_twin import (
+    NAME as _NAME_21,
+    SLUG as _SLUG_21,
+    DigitalTwinExecutor,
+)
+
 FORMAT_EXECUTORS: dict[str, "type[Executor]"] = {}
 
 
@@ -69,4 +75,5 @@ register(CredReuseVsHardeningExecutor, _NAME_17, _SLUG_17)
 register(ArmsRaceExecutor, _NAME_11, _SLUG_11)
 register(ExploitVsPatchExecutor, _NAME_19, _SLUG_19)
 register(TimeLimitedSiegeExecutor, _NAME_20, _SLUG_20)
+register(DigitalTwinExecutor, _NAME_21, _SLUG_21)
 from . import advanced as _advanced  # noqa: F401
