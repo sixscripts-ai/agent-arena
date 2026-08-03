@@ -60,6 +60,12 @@ from .digital_twin import (
     DigitalTwinExecutor,
 )
 
+from .same_defense_adaptive import (
+    NAME as _NAME_25,
+    SLUG as _SLUG_25,
+    SameDefenseAdaptiveExecutor,
+)
+
 FORMAT_EXECUTORS: dict[str, "type[Executor]"] = {}
 
 
@@ -76,4 +82,5 @@ register(ArmsRaceExecutor, _NAME_11, _SLUG_11)
 register(ExploitVsPatchExecutor, _NAME_19, _SLUG_19)
 register(TimeLimitedSiegeExecutor, _NAME_20, _SLUG_20)
 register(DigitalTwinExecutor, _NAME_21, _SLUG_21)
+register(SameDefenseAdaptiveExecutor, _NAME_25, _SLUG_25)
 from . import advanced as _advanced  # noqa: F401
