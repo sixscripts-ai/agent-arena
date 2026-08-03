@@ -11,7 +11,9 @@ from .schemas import ProviderCreate, ProviderHealth, ProviderOut
 router = APIRouter(prefix="/providers", tags=["providers"])
 
 OPENROUTER_BASE = "https://openrouter.ai/api/v1"
-MODAL_KIMI_BASE = "https://aschenbrenerashton--ep-kimi-k3-server.us-west.modal.direct/v1"
+MODAL_KIMI_BASE = (
+    "https://aschenbrenerashton--ep-kimi-k3-server.us-west.modal.direct/v1"
+)
 HOST_FREE_ID = "host:openrouter-free"
 
 # Multi-backend host catalog. Each entry declares how to resolve credentials.
@@ -116,7 +118,7 @@ HOST_PROVIDERS: list[dict] = [
         "base_url": "https://api.tokenrouter.com/v1",
         "masked_key": "sk-…",
         "auth_style": "bearer",
-        "model_name": "gpt-4o-mini",
+        "model_name": "moonshotai/kimi-k3",
         "cred": "tokenrouter",
     },
     {
@@ -143,7 +145,7 @@ HOST_PROVIDERS: list[dict] = [
         "base_url": "https://api.deepseek.com/v1",
         "masked_key": "sk-…",
         "auth_style": "bearer",
-        "model_name": "deepseek-chat",
+        "model_name": "deepseek-v4-flash",
         "cred": "deepseek",
     },
     {
@@ -154,6 +156,15 @@ HOST_PROVIDERS: list[dict] = [
         "auth_style": "bearer",
         "model_name": "gpt-4o-mini",
         "cred": "openai",
+    },
+    {
+        "id": "host:meta-muse",
+        "name": "Meta (Muse Spark)",
+        "base_url": "https://api.meta.ai/v1",
+        "masked_key": "sk-…",
+        "auth_style": "bearer",
+        "model_name": "muse-spark-1.1",
+        "cred": "meta",
     },
 ]
 
@@ -189,6 +200,8 @@ def _cred_material(cred: str) -> str | None:
         return s.get("HOST_DEEPSEEK_KEY") or None
     if cred == "openai":
         return s.get("HOST_OPENAI_KEY") or None
+    if cred == "meta":
+        return s.get("HOST_META_KEY") or None
     return None
 
 
@@ -197,20 +210,29 @@ def _host_configured(p: dict) -> bool:
 
 
 def configured_host_providers() -> list[dict]:
-    return [{k: p[k] for k in _PUBLIC_KEYS} for p in HOST_PROVIDERS if _host_configured(p)]
+    return [
+        {k: p[k] for k in _PUBLIC_KEYS} for p in HOST_PROVIDERS if _host_configured(p)
+    ]
 
 
 def _fernet_key() -> bytes:
     key = settings()["FERNET_KEY"]
     if not key:
-        raise HTTPException(status_code=500, detail="Server encryption key not configured")
+        raise HTTPException(
+            status_code=500, detail="Server encryption key not configured"
+        )
     return key.encode()
 
 
 def _find_existing(databases, database_id, user_id, name):
     res = databases.list_documents(
-        database_id, "providers",
-        queries=[Query.equal("user_id", user_id), Query.equal("name", name), Query.limit(1)],
+        database_id,
+        "providers",
+        queries=[
+            Query.equal("user_id", user_id),
+            Query.equal("name", name),
+            Query.limit(1),
+        ],
     )
     docs = res.documents
     return docs[0] if docs else None
@@ -234,26 +256,42 @@ def create_provider(body: ProviderCreate, user_id: str = Depends(get_current_use
     try:
         existing = _find_existing(databases, database_id, user_id, body.name)
         if existing:
-            doc = databases.update_document(database_id, "providers", existing.id, payload)
+            doc = databases.update_document(
+                database_id, "providers", existing.id, payload
+            )
         else:
-            doc = databases.create_document(database_id, "providers", "unique()", payload)
+            doc = databases.create_document(
+                database_id, "providers", "unique()", payload
+            )
     except AppwriteException as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
-    return ProviderOut(id=doc.id, name=body.name, base_url=body.base_url,
-                        masked_key=masked, auth_style=body.auth_style, model_name=body.model_name)
+    return ProviderOut(
+        id=doc.id,
+        name=body.name,
+        base_url=body.base_url,
+        masked_key=masked,
+        auth_style=body.auth_style,
+        model_name=body.model_name,
+    )
 
 
 @router.get("")
 def list_providers(user_id: str = Depends(get_current_user)):
     databases = db.get_databases()
     res = databases.list_documents(
-        db.get_database_id(), "providers",
+        db.get_database_id(),
+        "providers",
         queries=[Query.equal("user_id", user_id), Query.limit(100)],
     )
     items = [
-        ProviderOut(id=d.id, name=d.data["name"], base_url=d.data["base_url"],
-                    masked_key=d.data["masked_key"], auth_style=d.data["auth_style"],
-                    model_name=d.data.get("model_name", "")).model_dump()
+        ProviderOut(
+            id=d.id,
+            name=d.data["name"],
+            base_url=d.data["base_url"],
+            masked_key=d.data["masked_key"],
+            auth_style=d.data["auth_style"],
+            model_name=d.data.get("model_name", ""),
+        ).model_dump()
         for d in res.documents
     ]
     return configured_host_providers() + items
@@ -298,7 +336,9 @@ def provider_health(body: ProviderHealth, _user_id: str = Depends(get_current_us
     if body.auth_style == "modal_proxy":
         parts = [p.strip() for p in body.api_key.split(":")]
         if len(parts) != 2:
-            raise HTTPException(status_code=400, detail="modal_proxy key must be 'wk-...:ws-...'")
+            raise HTTPException(
+                status_code=400, detail="modal_proxy key must be 'wk-...:ws-...'"
+            )
         headers = {"Modal-Key": parts[0], "Modal-Secret": parts[1]}
     else:
         headers["Authorization"] = f"Bearer {body.api_key}"
@@ -313,5 +353,8 @@ def provider_health(body: ProviderHealth, _user_id: str = Depends(get_current_us
     except httpx.HTTPError as exc:
         raise HTTPException(status_code=502, detail=f"Request failed: {exc}") from exc
     if resp.status_code != 200:
-        raise HTTPException(status_code=400, detail=f"Provider returned {resp.status_code}: {resp.text[:200]}")
+        raise HTTPException(
+            status_code=400,
+            detail=f"Provider returned {resp.status_code}: {resp.text[:200]}",
+        )
     return {"ok": True, "status_code": resp.status_code}

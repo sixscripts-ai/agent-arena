@@ -6,10 +6,10 @@ import { useAuth } from "@/lib/auth";
 const PRESETS: Record<string, { name: string; base_url: string; auth_style: string; model_name: string }> = {
   openai: { name: "My OpenAI", base_url: "https://api.openai.com/v1", auth_style: "bearer", model_name: "gpt-4o-mini" },
   openrouter: { name: "My OpenRouter", base_url: "https://openrouter.ai/api/v1", auth_style: "bearer", model_name: "openai/gpt-4o-mini" },
-  deepseek: { name: "My DeepSeek", base_url: "https://api.deepseek.com/v1", auth_style: "bearer", model_name: "deepseek-chat" },
+  deepseek: { name: "My DeepSeek", base_url: "https://api.deepseek.com/v1", auth_style: "bearer", model_name: "deepseek-v4-flash" },
   xai: { name: "My xAI", base_url: "https://api.x.ai/v1", auth_style: "bearer", model_name: "grok-4" },
   groq: { name: "My Groq", base_url: "https://api.groq.com/openai/v1", auth_style: "bearer", model_name: "llama-3.3-70b-versatile" },
-  meta: { name: "My Meta", base_url: "https://api.llama.com/v1", auth_style: "bearer", model_name: "Llama-4-Maverick-17B-128E-Instruct" },
+  meta: { name: "My Meta", base_url: "https://api.meta.ai/v1", auth_style: "bearer", model_name: "muse-spark-1.1" },
   mistral: { name: "My Mistral", base_url: "https://api.mistral.ai/v1", auth_style: "bearer", model_name: "mistral-large-latest" },
   custom: { name: "", base_url: "https://api.openai.com/v1", auth_style: "bearer", model_name: "" },
 };

@@ -30,6 +30,7 @@ def settings() -> dict:
         "HOST_XAI_KEY": os.environ.get("HOST_XAI_KEY", ""),
         "HOST_DEEPSEEK_KEY": os.environ.get("HOST_DEEPSEEK_KEY", ""),
         "HOST_OPENAI_KEY": os.environ.get("HOST_OPENAI_KEY", ""),
+        "HOST_META_KEY": os.environ.get("HOST_META_KEY", ""),
         "HOST_MERGE_KEY": os.environ.get("HOST_MERGE_KEY", ""),
         "HOST_TOKENROUTER_KEY": os.environ.get("HOST_TOKENROUTER_KEY", ""),
         "HOST_GROQ_KEY": os.environ.get("HOST_GROQ_KEY", ""),
