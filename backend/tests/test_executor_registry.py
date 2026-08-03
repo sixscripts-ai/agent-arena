@@ -91,3 +91,21 @@ def test_guard_exact_and_prefix():
     assert Executor.guard("detection_rate_42", markers) == "DETECTION_RATE_42"
     assert Executor.guard("BOGUS", markers) == "INCONCLUSIVE"
     assert Executor.guard(5, markers) == 5  # non-strings pass through
+
+
+def test_get_executor_resolves_bespoke_by_name():
+    from agent_arena.sandbox.executors.formats.rev_shell_vs_defense import (
+        RevShellVsDefenseExecutor,
+    )
+
+    cfg = {"name": "Reverse shell vs network defense", "engine": "script_vs_defense"}
+    assert isinstance(get_executor(cfg), RevShellVsDefenseExecutor)
+
+
+def test_get_executor_resolves_bespoke_by_slug():
+    from agent_arena.sandbox.executors.formats.rev_shell_vs_defense import (
+        RevShellVsDefenseExecutor,
+    )
+
+    cfg = {"id": "reverse-shell-vs-network-defense", "engine": "script_vs_defense"}
+    assert isinstance(get_executor(cfg), RevShellVsDefenseExecutor)
