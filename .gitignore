@@ -20,3 +20,25 @@ frontend/node_modules/
 frontend/.next/
 frontend/.vercel/
 frontend/.env.local
+.vercel
+# local cruft — not committed
+.playwright-mcp/
+.vite/
+backend/scripts/
+backend/uv.lock
+docs/handoffs/
+docs/next-gen-agent-access.md
+docs/omni-executor.md
+dv2-mockup-dark-green-dense.png
+home-light.png
+vercel-ai-gateway-top.png
+memory-backend-options.md
+opencode.json
+AGENTS.md
+# kilo runtime — keep kilo.json + agents, ignore runtime
+.kilo/node_modules/
+.kilo/memory.json
+.kilo/mem0/
+.kilo/plans/
+.kilo/reports/
+.kilo/package-lock.json

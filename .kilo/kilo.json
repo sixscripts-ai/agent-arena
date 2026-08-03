@@ -1,0 +1,68 @@
+{
+  "$schema": "https://app.kilo.ai/config.json",
+  "mcp": {
+    "memory": {
+      "type": "local",
+      "command": [
+        "npx",
+        "-y",
+        "@modelcontextprotocol/server-memory"
+      ],
+      "environment": {
+        "MEMORY_FILE_PATH": "./.kilo/memory.json"
+      }
+    },
+    "mem0": {
+      "type": "local",
+      "command": [
+        "uvx",
+        "mem0-mcp-server"
+      ],
+      "environment": {
+        "MEM0_API_KEY": "m0-upphwS3V0cMFzEHLLx28zubAVbKlCjRKZFOcYb4Y",
+        "MEM0_DEFAULT_USER_ID": "villain"
+      }
+    },
+    "filesystem": {
+      "type": "local",
+      "command": [
+        "npx",
+        "-y",
+        "@modelcontextprotocol/server-filesystem",
+        "./.kilo"
+      ],
+      "environment": {}
+    },
+    "modal": {
+      "type": "local",
+      "command": [
+        "npx",
+        "-y",
+        "modal-mcp-server"
+      ],
+      "environment": {
+        "MODAL_TOKEN_ID": "ak-uobLWGNUF5WcvuZa6WBvF4",
+        "MODAL_TOKEN_SECRET": "as-b7FRVUWxoUlomuRjSdCpnI"
+      }
+    }
+  },
+  "permission": {
+    "read": "allow",
+    "edit": {
+      ".kilo/**": "allow",
+      "custom_skills/**": "allow",
+      "docs/**": "allow",
+      ".cursor/**": "allow",
+      "AGENTS.md": "allow"
+    },
+    "bash": "allow",
+    "glob": "allow",
+    "grep": "allow",
+    "task": "allow",
+    "skill": "allow",
+    "question": "allow"
+  },
+  "indexing": {
+    "enabled": true
+  }
+}

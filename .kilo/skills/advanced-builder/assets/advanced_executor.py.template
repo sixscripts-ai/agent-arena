@@ -1,0 +1,2 @@
+# See canonical implementation at backend/agent_arena/sandbox/executors/advanced_executor.py
+# Key parts: ToolSession, parse_tool_calls, AdvancedExecutor.run_phase with ARENA_IN_SANDBOX gate

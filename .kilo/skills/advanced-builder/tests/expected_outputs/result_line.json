@@ -1,0 +1,1 @@
+EXECUTOR_RESULT: {"model_id": "player_a", "role": "player_a", "passed": true, "steps": 4, "done": true, "outcome": "DONE", "final": "Fixed palindrome"}

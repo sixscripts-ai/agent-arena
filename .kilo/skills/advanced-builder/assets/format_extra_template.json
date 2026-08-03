@@ -1,0 +1,10 @@
+{
+  "Tool-using coding race": {
+    "target_code": "# TASK: Fix is_palindrome...\n",
+    "max_tool_turns": 6,
+    "max_tool_steps": 14,
+    "tool_timeout": 20,
+    "exec_timeout_seconds": 240,
+    "outcome_markers": ["DONE", "TEST_PASS", "TEST_FAIL", "STEP_BUDGET_EXCEEDED"]
+  }
+}
