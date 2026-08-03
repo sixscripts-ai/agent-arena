@@ -34,60 +34,83 @@ export default function Home() {
   const filtered = engine === "all" ? formats : formats.filter(f=>f.engine===engine);
 
   return (
-    <div className="space-y-12">
-      <section className="grid grid-cols-12 gap-6 border-b-[1.5px] border-ink pb-10">
-        <div className="col-span-12 lg:col-span-7 space-y-5">
-          <div className="inline-flex items-center gap-2 border border-ink px-3 py-1 text-[11px] mono">
-            <span className="h-2 w-2 bg-vermillion animate-pulse" /> LIVE • 8 battles running • HOST FREE DEFAULT
+    <div className="space-y-12 md:space-y-16">
+      <section className="grid grid-cols-12 gap-8 border-b border-border pb-12">
+        <div className="col-span-12 lg:col-span-7 space-y-6">
+          <div className="inline-flex items-center gap-2 rounded-md border border-border bg-surface px-3 py-1.5 text-[11px] font-medium text-muted">
+            <span className="h-1.5 w-1.5 rounded-full bg-accent animate-pulse" />
+            LIVE • 8 battles running • Host free default
           </div>
-          <h1 className="display text-[48px] md:text-[64px] leading-[0.9] tracking-[-0.04em]">
-            Models fight.<br/>You watch code.
+          <h1 className="text-[34px] md:text-[56px] font-semibold leading-[1.05] tracking-[-0.03em]">
+            Models fight.
+            <br />
+            You watch code.
           </h1>
-          <p className="max-w-[48ch] text-[15px] leading-6 text-zinc-600">
-            Not a fake log feed. Two models streaming real code side-by-side, token-by-token. Judge scores on rubric, redacted reasoning. BYOK or use host free (DeepSeek, OpenRouter, Groq).
+          <p className="max-w-[52ch] text-[15px] leading-6 text-muted">
+            Not a fake log feed. Two models streaming real code side-by-side, token-by-token.
+            Judge scores on rubric, redacted reasoning. BYOK or use host free (DeepSeek, OpenRouter, Groq).
           </p>
-          <div className="flex gap-3 pt-2">
-            <Link to={user ? "/battles/new" : "/signup"} className="h-11 px-6 grid place-items-center bg-ink text-paper text-[13px] font-bold border-[1.5px] border-ink shadow-brutal hover:translate-x-[-1px] hover:translate-y-[-1px]">START BATTLE →</Link>
-            <Link to="/leaderboard" className="h-11 px-6 grid place-items-center border-[1.5px] border-ink bg-paper text-[13px] font-bold hover:bg-ink hover:text-paper">LEADERBOARD</Link>
+          <div className="flex gap-3 pt-1">
+            <Link to={user ? "/battles/new" : "/signup"} className="btn btn-primary h-11 px-6 text-[13px]">Start battle →</Link>
+            <Link to="/leaderboard" className="btn btn-ghost h-11 px-6 text-[13px]">Leaderboard</Link>
           </div>
         </div>
         <div className="col-span-12 lg:col-span-5 grid grid-cols-2 gap-3">
-          <div className="border-[1.5px] border-ink p-4 bg-paper">
-            <div className="text-[10px] mono uppercase tracking-wide text-zinc-500">Formats</div>
-            <div className="mt-2 display text-[32px]">{formats.length || 25}</div>
-            <div className="text-[11px] mono text-zinc-500">{engines.length-1} engines</div>
+          <div className="card p-5">
+            <div className="text-[11px] font-medium text-muted">Formats</div>
+            <div className="mt-2 text-[32px] font-semibold tracking-[-0.02em]">{formats.length || 25}</div>
+            <div className="mt-1 text-[12px] text-muted">{engines.length - 1} engines</div>
           </div>
-          <div className="border-[1.5px] border-ink p-4 bg-paper">
-            <div className="text-[10px] mono uppercase text-zinc-500">Avg battle</div>
-            <div className="mt-2 display text-[32px]">47s</div>
-            <div className="text-[11px] mono text-zinc-500">median</div>
+          <div className="card p-5">
+            <div className="text-[11px] font-medium text-muted">Avg battle</div>
+            <div className="mt-2 text-[32px] font-semibold tracking-[-0.02em]">47s</div>
+            <div className="mt-1 text-[12px] text-muted">median</div>
           </div>
-          <div className="col-span-2 border-[1.5px] border-ink bg-vermillion text-white p-4 flex items-center justify-between">
+          <div className="col-span-2 card p-5 flex items-center justify-between gap-4">
             <div>
-              <div className="text-[10px] mono uppercase opacity-80">Host free models</div>
-              <div className="text-[13px] font-bold">nemotron-3-ultra:free • r1:free • llama-3.3-70b</div>
+              <div className="text-[11px] font-medium text-muted">Host free models</div>
+              <div className="mt-1 text-[13px] font-medium">nemotron-3-ultra:free • r1:free • llama-3.3-70b</div>
             </div>
-            <div className="h-2 w-2 bg-white animate-pulse" />
+            <span className="tag shrink-0"><span className="h-1.5 w-1.5 rounded-full bg-success" />FREE</span>
           </div>
-          <div className="col-span-2 border-[1.5px] border-ink bg-paper p-3 mono text-[11px] text-zinc-600">
-            Backend: {import.meta.env.VITE_MODAL_URL?.slice(0,32) || "modal.run"}... • Dual code streaming: line numbers + tok/s + win condition • No fake logs
+          <div className="col-span-2 rounded-lg bg-soft border border-border px-4 py-3 font-mono text-[11px] leading-5 text-muted">
+            Backend: {import.meta.env.VITE_MODAL_URL?.slice(0, 32) || "modal.run"}... • Dual code streaming:
+            line numbers + tok/s + win condition • No fake logs
           </div>
         </div>
       </section>
 
-      <section className="space-y-4">
-        <div className="flex flex-wrap items-end justify-between gap-3 border-b-[1.5px] border-ink pb-3">
-          <h2 className="display text-[20px]">FORMAT LIBRARY • {filtered.length}</h2>
+      <section className="space-y-5">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <h2 className="text-[16px] font-semibold tracking-[-0.01em]">
+            Format library <span className="ml-1 text-muted font-normal">{filtered.length}</span>
+          </h2>
           <div className="flex flex-wrap gap-1.5">
             {engines.map(e=>(
-              <button key={e} onClick={()=>setEngine(e)} className={`border-[1.5px] px-3 py-1 text-[11px] mono uppercase ${engine===e ? "bg-ink text-paper border-ink" : "bg-paper text-zinc-600 border-ink/20 hover:border-ink"}`}>{e}</button>
+              <button
+                key={e}
+                onClick={()=>setEngine(e)}
+                className={`rounded-md border px-3 py-1.5 text-[11px] font-medium transition-colors ${
+                  engine===e
+                    ? "border-accent bg-accent text-accent-fg"
+                    : "border-border bg-surface text-muted hover:border-borderStrong hover:text-foreground"
+                }`}
+              >
+                {e}
+              </button>
             ))}
           </div>
         </div>
-        {loading ? <p className="mono text-[12px] text-zinc-500">Loading formats…</p> : (
+        {loading ? (
+          <p className="text-[12px] text-muted">Loading formats…</p>
+        ) : (
           <div className="grid grid-cols-12 gap-3 auto-rows-[180px]">
             {filtered.map((f,i)=><FormatCard key={f.id} format={f} user={user} large={i<2} />)}
-            {filtered.length===0 && <div className="col-span-12 border-[1.5px] border-dashed border-ink p-8 text-center mono text-[12px]">No formats for {engine}</div>}
+            {filtered.length===0 && (
+              <div className="col-span-12 rounded-lg border border-dashed border-border p-10 text-center text-[13px] text-muted">
+                No formats for {engine}
+              </div>
+            )}
           </div>
         )}
       </section>

@@ -5,11 +5,34 @@ export default {
   theme: {
     extend: {
       colors: {
+        background: "var(--bg)",
+        foreground: "var(--fg)",
+        muted: "var(--fg-muted)",
+        "bg-soft": "var(--bg-soft)",
+        surface: "var(--surface)",
+        surface2: "var(--surface-2)",
+        border: "var(--border)",
+        borderStrong: "var(--border-strong)",
+        accent: {
+          DEFAULT: "var(--accent)",
+          hover: "var(--accent-hover)",
+          fg: "var(--accent-fg)",
+          soft: "var(--accent-soft)",
+        },
+        link: "var(--link)",
+        success: "var(--success)",
+        successStrong: "var(--success-strong)",
+        warn: "var(--warn)",
+        danger: "var(--danger)",
+        code: "var(--code-bg)",
+        codeFg: "var(--code-fg)",
+        codeBorder: "var(--code-border)",
+        lineNo: "var(--line-no)",
+        // Legacy brand aliases (still referenced by /design lab pages)
         paper: "#FAF6F0",
         ink: "#0A0A0A",
         vermillion: "#FF3B30",
         blueprint: "#0A84FF",
-        success: "#00A676",
         zinc: {
           50: "#FAFAFA",
           100: "#F5F5F5",
@@ -22,7 +45,7 @@ export default {
           800: "#27272A",
           900: "#18181B",
           950: "#09090B",
-        }
+        },
       },
       fontFamily: {
         display: ["Instrument Serif", "Newsreader", "serif"],
@@ -31,10 +54,12 @@ export default {
       },
       borderRadius: {
         none: "0px",
-        sm: "4px",
-        md: "10px",
-        lg: "14px",
-        xl: "18px",
+        sm: "6px",
+        DEFAULT: "8px",
+        md: "8px",
+        lg: "12px",
+        xl: "16px",
+        full: "9999px",
       },
       boxShadow: {
         brutal: "4px 4px 0px 0px #0A0A0A",
@@ -43,7 +68,7 @@ export default {
       },
       animation: {
         "pulse-slow": "pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite",
-      }
+      },
     },
   },
   plugins: [],

@@ -3,11 +3,11 @@ import { useAuth } from "@/lib/auth";
 import { useEffect, useState } from "react";
 
 const LINKS = [
-  { href: "/", label: "ARENA" },
-  { href: "/battles/new", label: "NEW BATTLE" },
-  { href: "/providers", label: "KEYS" },
-  { href: "/leaderboard", label: "LEADERBOARD" },
-  { href: "/history", label: "HISTORY" },
+  { href: "/", label: "Arena" },
+  { href: "/battles/new", label: "New Battle" },
+  { href: "/providers", label: "Keys" },
+  { href: "/leaderboard", label: "Leaderboard" },
+  { href: "/history", label: "History" },
 ];
 
 export default function SiteHeader() {
@@ -19,45 +19,50 @@ export default function SiteHeader() {
   useEffect(() => { init(); }, [init]);
 
   return (
-    <header className="sticky top-0 z-50 border-b-[1.5px] border-ink bg-paper">
-      <div className="mx-auto flex h-[60px] max-w-[1360px] items-center justify-between px-6">
-        <div className="flex items-center gap-8">
+    <header className="sticky top-0 z-50 border-b border-border bg-background/80 backdrop-blur">
+      <div className="mx-auto flex h-14 max-w-[1360px] items-center justify-between px-6">
+        <div className="flex items-center gap-6">
           <Link to="/" className="flex items-center gap-2.5">
-            <div className="h-8 w-8 bg-ink text-paper grid place-items-center font-bold text-[13px]">A</div>
-            <span className="text-[16px] font-bold tracking-[-0.02em]">AGENT ARENA</span>
-            <span className="hidden md:inline ml-2 border border-ink px-2 py-0.5 text-[9px] tracking-widest">LAB LOG // 001</span>
+            <div className="grid h-7 w-7 place-items-center rounded-md bg-accent text-[13px] font-bold text-accent-fg">A</div>
+            <span className="text-[14px] font-semibold tracking-[-0.01em]">Agent Arena</span>
           </Link>
-          <nav className="hidden md:flex items-center gap-1">
+          <nav className="hidden items-center gap-1 md:flex">
             {LINKS.map(l => {
               const active = loc.pathname === l.href || (l.href !== "/" && loc.pathname.startsWith(l.href));
               return (
-                <Link key={l.href} to={l.href}
-                  className={`px-3 py-1.5 text-[12px] tracking-wide border ${active ? "bg-ink text-paper border-ink" : "border-transparent text-zinc-600 hover:text-ink hover:border-ink"}`}>
+                <Link key={l.href} to={l.href} className={`navlink ${active ? "active" : ""}`}>
                   {l.label}
                 </Link>
               );
             })}
           </nav>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-3">
           {user ? (
             <>
-              <span className="hidden sm:block text-[11px] mono text-zinc-500">{user.email || user.name || user.$id.slice(0,8)}</span>
-              <button onClick={async()=>{ await logout(); nav("/"); }} className="h-8 px-3 border-[1.5px] border-ink bg-paper text-[11px] hover:bg-ink hover:text-paper">LOG OUT</button>
+              <span className="hidden text-[12px] text-muted sm:block">{user.email || user.name || user.$id.slice(0, 8)}</span>
+              <button
+                onClick={async () => { await logout(); nav("/"); }}
+                className="btn btn-ghost h-8 px-3 text-[12px]"
+              >
+                Log out
+              </button>
             </>
           ) : (
             <>
-              <Link to="/login" className="h-8 px-3 grid place-items-center border-[1.5px] border-transparent text-[11px] hover:border-ink">LOG IN</Link>
-              <Link to="/signup" className="h-8 px-4 grid place-items-center bg-ink text-paper text-[11px] font-bold hover:bg-zinc-800">SIGN UP</Link>
+              <Link to="/login" className="navlink">Log in</Link>
+              <Link to="/signup" className="btn btn-primary h-8 px-4 text-[12px]">Sign up</Link>
             </>
           )}
-          <button onClick={()=>setOpen(!open)} className="md:hidden h-8 w-8 grid place-items-center border-[1.5px] border-ink">☰</button>
+          <button onClick={() => setOpen(!open)} aria-label="Menu" className="grid h-8 w-8 place-items-center rounded-md border border-border text-[14px] md:hidden">☰</button>
         </div>
       </div>
       {open && (
-        <div className="md:hidden border-t-[1.5px] border-ink bg-paper px-6 py-4 space-y-2">
-          {LINKS.map(l=>(
-            <Link key={l.href} to={l.href} onClick={()=>setOpen(false)} className="block py-2 text-[13px] border-b border-ink/10">{l.label}</Link>
+        <div className="space-y-1 border-t border-border bg-background px-4 py-3 md:hidden">
+          {LINKS.map(l => (
+            <Link key={l.href} to={l.href} onClick={() => setOpen(false)} className="block rounded-md px-2 py-2 text-[13px] hover:bg-surface2">
+              {l.label}
+            </Link>
           ))}
         </div>
       )}

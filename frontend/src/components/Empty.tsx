@@ -1,8 +1,3 @@
-import { cn } from '@/lib/utils'
-
-// Empty component
 export default function Empty() {
-  return (
-    <div className={cn('flex h-full items-center justify-center')}>Empty</div>
-  )
+  return <div className="flex h-full items-center justify-center text-muted">Empty</div>
 }

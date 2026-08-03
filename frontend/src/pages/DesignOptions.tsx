@@ -125,8 +125,10 @@ export default function DesignOptions() {
             <span className="font-bold tracking-tight">AGENT ARENA</span>
             <span className="text-[10px] opacity-50 border border-white/20 px-2 py-0.5 ml-2">DESIGN OPTIONS // PICK ONE</span>
           </div>
-          <Link to="/" className="text-[11px] border border-white/20 px-3 py-1.5 hover:bg-white hover:text-black">← BACK TO ARENA</Link>
-        </div>
+          <div className="flex items-center gap-2">
+            <Link to="/design/battle" className="text-[11px] bg-white text-black border border-white px-3 py-1.5 hover:bg-black hover:text-white">BATTLE MOCKUP →</Link>
+            <Link to="/" className="text-[11px] border border-white/20 px-3 py-1.5 hover:bg-white hover:text-black">← BACK TO ARENA</Link>
+          </div>        </div>
       </header>
 
       <main className="mx-auto max-w-[1440px] px-6 py-8 space-y-10">

@@ -3,45 +3,63 @@ type Props = {
   label: string;
   code: string;
   status: string;
-  tok: string;
-  color: "emerald" | "violet" | "vermillion" | "blueprint";
+  tok?: string;
+  color?: "accent" | "neutral" | "success" | "danger";
   artifactMeta: string;
   win?: boolean;
   winText?: string;
 };
 
-export default function CodePane({ modelId, label, code, status, tok, color, artifactMeta, win, winText }: Props) {
+const DOT: Record<string, string> = {
+  accent: "bg-accent",
+  neutral: "bg-zinc-400",
+  success: "bg-success",
+  danger: "bg-danger",
+};
+
+export default function CodePane({ modelId, label, code, status, tok, color = "neutral", artifactMeta, win, winText }: Props) {
   const lines = code.split("\n");
-  const dotColor = color === "emerald" ? "bg-emerald-500" : color === "violet" ? "bg-violet-500" : color === "vermillion" ? "bg-vermillion" : "bg-blueprint";
-  const borderColor = color === "emerald" ? "border-emerald-500/30 text-emerald-700" : color === "violet" ? "border-violet-500/30 text-violet-700" : "border-ink/20";
-  
+  const dot = DOT[color] || DOT.neutral;
+
   return (
-    <div className="rounded-none border-[1.5px] border-ink bg-[#0A0A0A] overflow-hidden flex flex-col">
-      <div className="flex items-center justify-between border-b border-white/10 bg-[#141414] px-4 py-2.5">
+    <div className="card flex flex-col overflow-hidden">
+      <header className="flex items-center justify-between border-b border-border px-4 py-2.5">
         <div className="flex items-center gap-2.5">
-          <div className="h-6 w-6 rounded-none bg-white/10 border border-white/10 grid place-items-center text-[11px] text-white">{modelId[0]?.toUpperCase()}</div>
+          <div className="grid h-6 w-6 place-items-center rounded-md border border-borderStrong bg-surface2 text-[11px] font-bold">
+            {modelId[0]?.toUpperCase()}
+          </div>
           <div>
-            <div className="text-[12px] font-medium text-white">{label}</div>
-            <div className="text-[10px] mono text-zinc-500">{modelId} • {tok}</div>
+            <div className="text-[12px] font-semibold leading-tight">{label}</div>
+            <div className="font-mono text-[10px] text-muted">{modelId}{tok ? ` • ${tok}` : ""}</div>
           </div>
         </div>
-        <div className="flex items-center gap-2">
-          <span className={`h-2 w-2 rounded-full ${dotColor} ${status==="running" ? "animate-pulse" : ""}`} />
-          <span className="text-[10px] mono text-zinc-500 uppercase tracking-wide">{status==="running" ? "STREAMING" : status.toUpperCase()}</span>
+        <div className="flex items-center gap-2.5">
+          {tok && <span className="font-mono text-[10px] text-muted">{tok}</span>}
+          <span className="flex items-center gap-1.5">
+            <span className={`h-1.5 w-1.5 rounded-full ${dot} ${status === "running" ? "animate-pulse" : ""}`} />
+            <span className="text-[10px] font-medium text-muted">{status === "running" ? "STREAMING" : status.toUpperCase()}</span>
+          </span>
         </div>
-      </div>
-      <div className="relative flex-1 flex">
-        <div className="w-12 bg-[#0F0F0F] border-r border-white/10 py-3 text-right pr-3 select-none">
-          {lines.slice(0,80).map((_,i)=><div key={i} className="mono text-[11px] leading-5 text-zinc-600">{i+1}</div>)}
+      </header>
+      <div className="flex flex-1 bg-code">
+        <div className="w-12 shrink-0 select-none border-r border-codeBorder py-3 pr-3 text-right">
+          {lines.slice(0, 80).map((_, i) => (
+            <div key={i} className="font-mono text-[11px] leading-5 text-lineNo">{i + 1}</div>
+          ))}
         </div>
-        <pre className="flex-1 max-h-[560px] overflow-auto p-3 mono text-[12px] leading-5 text-zinc-200 whitespace-pre-wrap break-all">
-          <code>{code || "// waiting for model — real code streams here, not fake logs\n// dual pane, line numbers, win condition detection"}{status==="running" && <span className="inline-block w-2 h-3 bg-white animate-pulse ml-0.5 translate-y-0.5" />}</code>
+        <pre className="max-h-[560px] flex-1 overflow-auto p-3 font-mono text-[12px] leading-5 text-codeFg whitespace-pre-wrap break-all">
+          <code>
+            {code || "// waiting for real code — not fake logs\n// streams token-by-token via sandbox"}
+            {status === "running" && <span className="ml-0.5 inline-block h-3 w-2 translate-y-0.5 animate-pulse bg-white" />}
+          </code>
         </pre>
       </div>
-      <div className="border-t border-white/10 bg-[#111] px-3 py-2 flex items-center justify-between text-[10px] mono text-zinc-500">
-        <span>{artifactMeta}</span>
-        <span className={win ? "text-amber-300" : ""}>{win ? winText || "WIN CONDITION MET" : code ? "redacted + truncated (100kb cap)" : "idle"}</span>
-      </div>
+      <footer className="flex items-center justify-between border-t border-border px-4 py-2 text-[10px]">
+        <span className="font-mono text-muted">{artifactMeta}</span>
+        <span className={win ? "font-medium text-warn" : "font-mono text-muted"}>
+          {win ? winText || "WIN CONDITION MET" : code ? "redacted + truncated" : "idle"}
+        </span>
+      </footer>
     </div>
   );
 }

@@ -63,58 +63,94 @@ export default function Providers() {
     } catch (e) { setErr(e instanceof Error ? e.message : "Save failed"); } finally { setBusy(false); }
   }
 
-  if (!user) return <div className="p-8 mono text-[12px]">Login required — <Link to="/login" className="underline">LOG IN</Link></div>;
+  if (!user) return <div className="p-8 text-[13px] text-muted">Login required — <Link to="/login" className="link">log in</Link></div>;
 
   return (
     <div className="grid grid-cols-12 gap-6">
       <div className="col-span-12 lg:col-span-7 space-y-6">
-        <div className="border-b-[1.5px] border-ink pb-4">
-          <h1 className="display text-[32px]">KEYS // BYOK + HOST</h1>
-          <p className="mono text-[11px] text-zinc-500 mt-1">Host free always — DeepSeek, OpenRouter, Groq. Add yours to compete. Keys encrypted at rest (Fernet).</p>
+        <div>
+          <h1 className="text-[22px] font-semibold tracking-[-0.01em]">Keys</h1>
+          <p className="mt-1 text-[13px] text-muted">Host models are free always — DeepSeek, OpenRouter, Groq. Add your own keys to compete. Keys encrypted at rest (Fernet).</p>
         </div>
+
         <section className="space-y-3">
-          <h2 className="mono text-[11px] uppercase tracking-widest bg-ink text-paper inline-block px-2 py-1">Your providers</h2>
+          <h2 className="text-[12px] font-semibold text-muted uppercase tracking-wide">Your providers</h2>
           {yours.map(p=>(
-            <div key={p.id} className="border-[1.5px] border-ink p-4 bg-paper flex justify-between">
-              <div>
-                <div className="font-bold text-[13px]">{p.name}</div>
-                <div className="mono text-[11px] text-zinc-600">{p.id} • {p.model_name} • {p.base_url}</div>
-                <div className="mono text-[10px] text-zinc-500">{p.masked_key}</div>
+            <div key={p.id} className="card p-4 flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <div className="text-[13px] font-semibold">{p.name}</div>
+                <div className="mt-0.5 truncate font-mono text-[11px] text-muted">{p.model_name} • {p.base_url}</div>
+                <div className="mt-1 font-mono text-[10px] text-muted">{p.id} • {p.masked_key}</div>
               </div>
-              <span className="h-fit border border-ink px-2 py-0.5 mono text-[10px]">{p.auth_style}</span>
+              <span className="tag shrink-0">{p.auth_style}</span>
             </div>
           ))}
-          {!yours.length && <div className="border-[1.5px] border-dashed border-ink p-6 mono text-[12px]">No personal keys — use form → add OpenAI, DeepSeek, Grok, etc.</div>}
+          {!yours.length && (
+            <div className="rounded-lg border border-dashed border-border p-6 text-[12px] text-muted">
+              No personal keys yet — add OpenAI, DeepSeek, Grok, etc. from the form to compete.
+            </div>
+          )}
         </section>
+
         <section className="space-y-3">
-          <h2 className="mono text-[11px] uppercase tracking-widest bg-blueprint text-white inline-block px-2 py-1">Host (read-only)</h2>
+          <h2 className="text-[12px] font-semibold text-muted uppercase tracking-wide">Host — read only</h2>
           {host.map(p=>(
-            <div key={p.id} className="border-[1.5px] border-blueprint bg-blueprint/5 p-4 flex justify-between">
-              <div>
-                <div className="font-bold text-[13px]">{p.name}</div>
-                <div className="mono text-[11px] text-zinc-600">{p.id} • {p.model_name}</div>
+            <div key={p.id} className="card p-4 flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <div className="text-[13px] font-semibold">{p.name}</div>
+                <div className="mt-0.5 truncate font-mono text-[11px] text-muted">{p.id} • {p.model_name}</div>
               </div>
-              <span className="h-fit bg-blueprint text-white px-2 py-0.5 mono text-[10px]">HOST</span>
+              <span className="tag shrink-0 border-accent/40 text-accent">HOST</span>
             </div>
           ))}
         </section>
       </div>
-      <div className="col-span-12 lg:col-span-5 border-[1.5px] border-ink bg-paper p-6 h-fit sticky top-[72px]">
-        <h3 className="display text-[18px] mb-4">Add / Update Key</h3>
-        <form onSubmit={onSubmit} className="space-y-3">
-          <div><label className="mono text-[10px] uppercase">Preset</label><select className="w-full h-10 border-[1.5px] border-ink px-3 text-[13px] bg-paper" value={preset} onChange={e=>applyPreset(e.target.value)}>{Object.keys(PRESETS).map(k=><option key={k} value={k}>{k}</option>)}</select></div>
-          <div><label className="mono text-[10px] uppercase">Name</label><input className="w-full h-10 border-[1.5px] border-ink px-3 text-[13px]" value={name} onChange={e=>setName(e.target.value)} required /></div>
-          <div><label className="mono text-[10px] uppercase">Base URL</label><input className="w-full h-10 border-[1.5px] border-ink px-3 text-[13px]" value={baseUrl} onChange={e=>setBaseUrl(e.target.value)} required /></div>
-          <div><label className="mono text-[10px] uppercase">API Key</label><input className="w-full h-10 border-[1.5px] border-ink px-3 text-[13px]" type="password" value={apiKey} onChange={e=>setApiKey(e.target.value)} required /></div>
-          <div><label className="mono text-[10px] uppercase">Model Name</label><input className="w-full h-10 border-[1.5px] border-ink px-3 text-[13px]" value={modelName} onChange={e=>setModelName(e.target.value)} required /></div>
-          <div><label className="mono text-[10px] uppercase">Auth Style</label><select className="w-full h-10 border-[1.5px] border-ink px-3 text-[13px] bg-paper" value={authStyle} onChange={e=>setAuthStyle(e.target.value)}><option value="bearer">bearer</option><option value="modal_proxy">modal_proxy</option></select></div>
-          {msg && <div className="border border-success bg-success/10 px-3 py-2 mono text-[11px] text-success">{msg}</div>}
-          {err && <div className="border border-vermillion bg-vermillion/10 px-3 py-2 mono text-[11px] text-vermillion break-all">{err}</div>}
-          <div className="grid grid-cols-2 gap-2">
-            <button type="button" disabled={testing || !apiKey} onClick={onTest} className="h-10 border-[1.5px] border-ink bg-paper mono text-[11px] font-bold hover:bg-ink hover:text-paper disabled:opacity-50">{testing ? "TESTING..." : "TEST KEY"}</button>
-            <button disabled={busy} className="h-10 bg-ink text-paper mono text-[11px] font-bold border-[1.5px] border-ink hover:bg-paper hover:text-ink">{busy ? "SAVING..." : "SAVE →"}</button>
-          </div>
-        </form>
+
+      <div className="col-span-12 lg:col-span-5">
+        <div className="card p-6 h-fit sticky top-[72px]">
+          <h3 className="text-[15px] font-semibold tracking-[-0.01em] mb-4">Add / update key</h3>
+          <form onSubmit={onSubmit} className="space-y-4">
+            <div className="space-y-1.5">
+              <label className="text-[12px] font-medium">Preset</label>
+              <select className="select" value={preset} onChange={e=>applyPreset(e.target.value)}>
+                {Object.keys(PRESETS).map(k=><option key={k} value={k}>{k}</option>)}
+              </select>
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-[12px] font-medium">Name</label>
+              <input className="input" value={name} onChange={e=>setName(e.target.value)} required />
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-[12px] font-medium">Base URL</label>
+              <input className="input" value={baseUrl} onChange={e=>setBaseUrl(e.target.value)} required />
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-[12px] font-medium">API key</label>
+              <input className="input" type="password" value={apiKey} onChange={e=>setApiKey(e.target.value)} required />
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-[12px] font-medium">Model name</label>
+              <input className="input" value={modelName} onChange={e=>setModelName(e.target.value)} required />
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-[12px] font-medium">Auth style</label>
+              <select className="select" value={authStyle} onChange={e=>setAuthStyle(e.target.value)}>
+                <option value="bearer">bearer</option>
+                <option value="modal_proxy">modal_proxy</option>
+              </select>
+            </div>
+            {msg && <div className="rounded-md border border-success bg-success/10 px-3 py-2 text-[12px] text-success">{msg}</div>}
+            {err && <div className="rounded-md border border-danger bg-danger/10 px-3 py-2 text-[12px] text-danger break-all">{err}</div>}
+            <div className="grid grid-cols-2 gap-2">
+              <button type="button" disabled={testing || !apiKey} onClick={onTest} className="btn btn-ghost h-10 text-[12px]">
+                {testing ? "Testing…" : "Test key"}
+              </button>
+              <button disabled={busy} className="btn btn-primary h-10 text-[12px]">
+                {busy ? "Saving…" : "Save →"}
+              </button>
+            </div>
+          </form>
+        </div>
       </div>
     </div>
   );

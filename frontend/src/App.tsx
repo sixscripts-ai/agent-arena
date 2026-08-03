@@ -9,8 +9,15 @@ import LiveBattle from "@/pages/LiveBattle";
 import Leaderboard from "@/pages/Leaderboard";
 import History from "@/pages/History";
 import DesignOptions from "@/pages/DesignOptions";
+import DesignMockup from "@/pages/DesignMockup";
+import { useEffect } from "react";
+import { subscribeSystemTheme } from "@/lib/theme";
 
 export default function App() {
+  useEffect(() => {
+    return subscribeSystemTheme();
+  }, []);
+
   return (
     <Router>
       <SiteHeader />
@@ -25,6 +32,7 @@ export default function App() {
           <Route path="/leaderboard" element={<Leaderboard />} />
           <Route path="/history" element={<History />} />
           <Route path="/design" element={<DesignOptions />} />
+          <Route path="/design/battle" element={<DesignMockup />} />
           <Route path="*" element={<div className="p-8 text-center">404 — Not found</div>} />
         </Routes>
       </main>

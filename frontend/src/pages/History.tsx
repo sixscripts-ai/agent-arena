@@ -34,28 +34,31 @@ export default function History() {
 
   return (
     <div className="max-w-[900px] mx-auto space-y-6">
-      <div className="border-b-[1.5px] border-ink pb-4">
-        <h1 className="display text-[32px]">HISTORY // SAVED BATTLES</h1>
-        <p className="mono text-[11px] text-zinc-500">Lab logbook — saved runs + local device IDs</p>
+      <div>
+        <h1 className="text-[22px] font-semibold tracking-[-0.01em]">History</h1>
+        <p className="mt-1 text-[13px] text-muted">Saved battles — plus runs from this device.</p>
       </div>
-      {err && <div className="border border-vermillion bg-vermillion/10 px-3 py-2 mono text-[11px] text-vermillion">{err}</div>}
+      {err && <div className="rounded-md border border-danger bg-danger/10 px-3 py-2 text-[12px] text-danger">{err}</div>}
       <div className="space-y-3">
         {battles.map(b=>{
           const id = (b as any).id || (b as any).$id || "";
+          const statusColor = b.status === "completed" ? "text-success" : b.status === "failed" || b.status === "cancelled" ? "text-danger" : "text-warn";
           return (
-            <div key={id} className="border-[1.5px] border-ink bg-paper p-4 flex justify-between">
-              <div>
-                <div className="mono text-[12px] font-bold">{id}</div>
-                <div className="mono text-[11px] text-zinc-600">format: {b.format_id} • status: {b.status} • models: {(b.model_ids||[]).join(", ")}</div>
+            <div key={id} className="card p-4 flex items-center justify-between gap-3">
+              <div className="min-w-0">
+                <div className="font-mono text-[12px] font-semibold">{id}</div>
+                <div className="mt-0.5 truncate font-mono text-[11px] text-muted">
+                  format: {b.format_id} • <span className={statusColor}>{b.status}</span> • {(b.model_ids||[]).join(", ")}
+                </div>
               </div>
-              <Link to={`/battles/${id}`} className="h-8 px-3 grid place-items-center border-[1.5px] border-ink bg-ink text-paper mono text-[11px] hover:bg-paper hover:text-ink">OPEN →</Link>
+              <Link to={`/battles/${id}`} className="btn btn-ghost h-8 px-3 text-[12px] shrink-0">Open →</Link>
             </div>
           );
         })}
         {!battles.length && (
-          <div className="border-[1.5px] border-dashed border-ink p-8 text-center">
-            <p className="mono text-[12px]">No saved battles yet.</p>
-            <Link to="/battles/new" className="mt-3 inline-block border-[1.5px] border-ink px-4 py-2 mono text-[11px] font-bold hover:bg-ink hover:text-paper">CREATE BATTLE →</Link>
+          <div className="card p-10 text-center">
+            <p className="text-[13px] text-muted">No saved battles yet.</p>
+            <Link to="/battles/new" className="btn btn-primary mt-4 h-10 px-5 text-[12px]">Create battle →</Link>
           </div>
         )}
       </div>
