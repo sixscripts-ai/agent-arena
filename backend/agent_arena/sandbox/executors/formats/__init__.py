@@ -36,6 +36,12 @@ from .cred_reuse_vs_hardening import (
     CredReuseVsHardeningExecutor,
 )
 
+from .arms_race import (
+    NAME as _NAME_11,
+    SLUG as _SLUG_11,
+    ArmsRaceExecutor,
+)
+
 FORMAT_EXECUTORS: dict[str, "type[Executor]"] = {}
 
 
@@ -48,3 +54,4 @@ register(RevShellVsDefenseExecutor, _NAME_4, _SLUG_4)
 register(PayloadVsDetectionExecutor, _NAME_5, _SLUG_5)
 register(PolymorphVsSignatureExecutor, _NAME_16, _SLUG_16)
 register(CredReuseVsHardeningExecutor, _NAME_17, _SLUG_17)
+register(ArmsRaceExecutor, _NAME_11, _SLUG_11)
