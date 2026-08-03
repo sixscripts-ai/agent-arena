@@ -2,9 +2,16 @@ import re
 
 REDACT_PATTERNS = [
     r"sk-[A-Za-z0-9_-]{16,}",
+    r"sk-or-v1-[A-Za-z0-9_-]{16,}",
+    r"sk-Ke[A-Za-z0-9_-]{16,}",
     r"wk-[A-Za-z0-9]{20,}",
     r"ws-[A-Za-z0-9]{20,}",
+    r"gsk_[A-Za-z0-9]{20,}",
+    r"xai-[A-Za-z0-9]{20,}",
+    r"mg__[A-Za-z0-9_-]{20,}",
     r"standard_[A-Za-z0-9]{60,}",
+    r"ak-[A-Za-z0-9]{16,}",
+    r"as-[A-Za-z0-9]{16,}",
 ]
 
 ARTIFACT_MAX_BYTES = 100_000

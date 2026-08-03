@@ -102,6 +102,33 @@ HOST_PROVIDERS: list[dict] = [
     },
     # --- Optional host backends (appear when env key is set) ---
     {
+        "id": "host:merge-gateway",
+        "name": "Merge Gateway",
+        "base_url": "https://api-gateway.merge.dev/v1/openai",
+        "masked_key": "mg__…",
+        "auth_style": "bearer",
+        "model_name": "openai/gpt-4o-mini",
+        "cred": "merge",
+    },
+    {
+        "id": "host:tokenrouter",
+        "name": "TokenRouter",
+        "base_url": "https://api.tokenrouter.com/v1",
+        "masked_key": "sk-…",
+        "auth_style": "bearer",
+        "model_name": "gpt-4o-mini",
+        "cred": "tokenrouter",
+    },
+    {
+        "id": "host:groq-llama",
+        "name": "Groq (Llama 3.3 70B)",
+        "base_url": "https://api.groq.com/openai/v1",
+        "masked_key": "gsk_…",
+        "auth_style": "bearer",
+        "model_name": "llama-3.3-70b-versatile",
+        "cred": "groq",
+    },
+    {
         "id": "host:xai-grok",
         "name": "xAI (Grok)",
         "base_url": "https://api.x.ai/v1",
@@ -150,6 +177,12 @@ def _cred_material(cred: str) -> str | None:
         if key and secret:
             return f"{key}:{secret}"
         return None
+    if cred == "merge":
+        return s.get("HOST_MERGE_KEY") or None
+    if cred == "tokenrouter":
+        return s.get("HOST_TOKENROUTER_KEY") or None
+    if cred == "groq":
+        return s.get("HOST_GROQ_KEY") or None
     if cred == "xai":
         return s.get("HOST_XAI_KEY") or None
     if cred == "deepseek":

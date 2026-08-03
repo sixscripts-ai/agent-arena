@@ -31,25 +31,25 @@ const PRESETS: Record<
     name: "My OpenRouter",
     base_url: "https://openrouter.ai/api/v1",
     auth_style: "bearer",
-    model_name: "openai/gpt-4o-mini",
+    model_name: "nvidia/nemotron-3-ultra-550b-a55b:free",
   },
   xai: {
     name: "My xAI",
     base_url: "https://api.x.ai/v1",
     auth_style: "bearer",
-    model_name: "grok-4-1-fast-non-reasoning",
+    model_name: "xai/grok-4.5",
   },
   meta: {
     name: "My Meta",
     base_url: "https://api.llama.com/v1",
     auth_style: "bearer",
-    model_name: "Llama-4-Maverick-17B-128E-Instruct",
+    model_name: "muse-spark-1.1",
   },
   deepseek: {
     name: "My DeepSeek",
     base_url: "https://api.deepseek.com/v1",
     auth_style: "bearer",
-    model_name: "deepseek-chat",
+    model_name: "deepseek-v4-flash",
   },
   mistral: {
     name: "My Mistral",
@@ -61,7 +61,7 @@ const PRESETS: Record<
     name: "My Merge Gateway",
     base_url: "https://api-gateway.merge.dev/v1/openai",
     auth_style: "bearer",
-    model_name: "openai/gpt-4o-mini",
+    model_name: "minimax/minimax-m3",
   },
   together: {
     name: "My Together",
@@ -91,7 +91,7 @@ const PRESETS: Record<
     name: "My TokenRouter",
     base_url: "https://api.tokenrouter.com/v1",
     auth_style: "bearer",
-    model_name: "gpt-4o-mini",
+    model_name: "moonshotai/kimi-k3-free",
   },
   groq: {
     name: "My Groq",
@@ -154,6 +154,7 @@ export default function ProvidersPage() {
 
   const hostItems = useMemo(() => items.filter((p) => isHostProviderId(p.id)), [items]);
   const userItems = useMemo(() => items.filter((p) => !isHostProviderId(p.id)), [items]);
+  const presetCount = Object.keys(PRESETS).length;
 
   useEffect(() => {
     if (!loading && !user) router.replace("/login");
@@ -232,132 +233,168 @@ export default function ProvidersPage() {
   if (loading || !user) return <p className="text-zinc-500">Loading…</p>;
 
   return (
-    <div className="grid gap-8 lg:grid-cols-2">
-      <div className="space-y-6">
-        <div>
-          <h1 className="text-2xl font-semibold">Providers</h1>
-          <p className="mt-1 text-sm text-zinc-400">
-            Add your own API keys to compete with host models. Keys are encrypted at rest.
-            After saving, pick them on{" "}
-            <Link href="/battles/new" className="text-emerald-400 hover:underline">
-              New Battle
-            </Link>
-            .
-          </p>
+    <div className="space-y-8">
+      <section className="overflow-hidden rounded-3xl border border-emerald-500/20 bg-gradient-to-br from-emerald-500/12 via-zinc-950 to-zinc-950 p-6 shadow-[0_0_0_1px_rgba(16,185,129,0.08),0_24px_80px_rgba(0,0,0,0.45)]">
+        <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
+          <div className="max-w-2xl space-y-3">
+            <p className="text-xs uppercase tracking-[0.28em] text-emerald-300/80">
+              Provider command deck
+            </p>
+            <h1 className="text-3xl font-semibold tracking-tight text-white lg:text-4xl">
+              Load up models, keys, and battle-ready presets in one place.
+            </h1>
+            <p className="max-w-xl text-sm leading-6 text-zinc-300">
+              Save provider configs, verify keys, and keep your host models separate from your
+              personal endpoints before you launch a battle.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-3 gap-3 text-center sm:min-w-[420px]">
+            <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+              <div className="text-2xl font-semibold text-white">{userItems.length}</div>
+              <div className="mt-1 text-xs uppercase tracking-wide text-zinc-400">
+                Your providers
+              </div>
+            </div>
+            <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+              <div className="text-2xl font-semibold text-white">{hostItems.length}</div>
+              <div className="mt-1 text-xs uppercase tracking-wide text-zinc-400">Host</div>
+            </div>
+            <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+              <div className="text-2xl font-semibold text-white">{presetCount}</div>
+              <div className="mt-1 text-xs uppercase tracking-wide text-zinc-400">Presets</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <div className="grid gap-8 lg:grid-cols-2">
+        <div className="space-y-6">
+          <div>
+            <h1 className="text-2xl font-semibold">Providers</h1>
+            <p className="mt-1 text-sm text-zinc-400">
+              Add your own API keys to compete with host models. Keys are encrypted at rest.
+              After saving, pick them on{" "}
+              <Link href="/battles/new" className="text-emerald-400 hover:underline">
+                New Battle
+              </Link>
+              .
+            </p>
+          </div>
+
+          <section className="space-y-3">
+            <h2 className="text-sm font-medium uppercase tracking-wide text-zinc-500">
+              Your providers
+            </h2>
+            {userItems.map((p) => (
+              <ProviderCard key={p.id} p={p} />
+            ))}
+            {!userItems.length && (
+              <p className="text-sm text-zinc-500">
+                No personal keys yet — use the form to add OpenAI, xAI, DeepSeek, or any
+                OpenAI-compatible endpoint.
+              </p>
+            )}
+          </section>
+
+          <section className="space-y-3">
+            <h2 className="text-sm font-medium uppercase tracking-wide text-zinc-500">
+              Host (read-only)
+            </h2>
+            {hostItems.map((p) => (
+              <ProviderCard key={p.id} p={p} host />
+            ))}
+          </section>
         </div>
 
-        <section className="space-y-3">
-          <h2 className="text-sm font-medium uppercase tracking-wide text-zinc-500">
-            Your providers
-          </h2>
-          {userItems.map((p) => (
-            <ProviderCard key={p.id} p={p} />
-          ))}
-          {!userItems.length && (
-            <p className="text-sm text-zinc-500">
-              No personal keys yet — use the form to add OpenAI, xAI, DeepSeek, or any
-              OpenAI-compatible endpoint.
-            </p>
-          )}
-        </section>
-
-        <section className="space-y-3">
-          <h2 className="text-sm font-medium uppercase tracking-wide text-zinc-500">
-            Host (read-only)
-          </h2>
-          {hostItems.map((p) => (
-            <ProviderCard key={p.id} p={p} host />
-          ))}
-        </section>
+        <Card>
+          <CardHeader>
+            <CardTitle>Add / update your key</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={onSubmit} className="space-y-3">
+              <div className="space-y-1">
+                <Label>Preset</Label>
+                <select
+                  className="flex h-10 w-full rounded-md border border-zinc-700 bg-zinc-900 px-3 text-sm"
+                  value={preset}
+                  onChange={(e) => applyPreset(e.target.value)}
+                >
+                  <option value="openai">OpenAI</option>
+                  <option value="openrouter">OpenRouter</option>
+                  <option value="meta">Meta (Llama API)</option>
+                  <option value="mistral">Mistral</option>
+                  <option value="together">Together</option>
+                  <option value="fireworks">Fireworks</option>
+                  <option value="deepinfra">DeepInfra</option>
+                  <option value="perplexity">Perplexity</option>
+                  <option value="merge">Merge Gateway</option>
+                  <option value="tokenrouter">TokenRouter</option>
+                  <option value="groq">Groq</option>
+                  <option value="xai">xAI (Grok)</option>
+                  <option value="deepseek">DeepSeek</option>
+                  <option value="cerebras">Cerebras</option>
+                  <option value="custom">Custom</option>
+                </select>
+              </div>
+              <div className="space-y-1">
+                <Label>Name</Label>
+                <Input value={name} onChange={(e) => setName(e.target.value)} required />
+              </div>
+              <div className="space-y-1">
+                <Label>Base URL</Label>
+                <Input value={baseUrl} onChange={(e) => setBaseUrl(e.target.value)} required />
+              </div>
+              <div className="space-y-1">
+                <Label>API key</Label>
+                <Input
+                  type="password"
+                  value={apiKey}
+                  onChange={(e) => setApiKey(e.target.value)}
+                  required
+                />
+              </div>
+              <div className="space-y-1">
+                <Label>Model name</Label>
+                <Input
+                  value={modelName}
+                  onChange={(e) => setModelName(e.target.value)}
+                  placeholder="e.g. gpt-4o-mini"
+                  required
+                />
+              </div>
+              <div className="space-y-1">
+                <Label>Auth style</Label>
+                <select
+                  className="flex h-10 w-full rounded-md border border-zinc-700 bg-zinc-900 px-3 text-sm"
+                  value={authStyle}
+                  onChange={(e) => setAuthStyle(e.target.value)}
+                >
+                  <option value="bearer">bearer</option>
+                  <option value="modal_proxy">modal_proxy</option>
+                  <option value="custom">custom</option>
+                </select>
+              </div>
+              {healthMsg && <p className="text-sm text-emerald-400">{healthMsg}</p>}
+              {error && <p className="text-sm text-red-400 break-all">{error}</p>}
+              <div className="flex gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="flex-1"
+                  disabled={testing || !apiKey}
+                  onClick={onTest}
+                >
+                  {testing ? "Testing…" : "Test key"}
+                </Button>
+                <Button type="submit" disabled={busy} className="flex-1">
+                  {busy ? "Saving…" : "Save provider"}
+                </Button>
+              </div>
+            </form>
+          </CardContent>
+        </Card>
       </div>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Add / update your key</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={onSubmit} className="space-y-3">
-            <div className="space-y-1">
-              <Label>Preset</Label>
-              <select
-                className="flex h-10 w-full rounded-md border border-zinc-700 bg-zinc-900 px-3 text-sm"
-                value={preset}
-                onChange={(e) => applyPreset(e.target.value)}
-              >
-                <option value="openai">OpenAI</option>
-                <option value="openrouter">OpenRouter</option>
-                <option value="meta">Meta (Llama API)</option>
-                <option value="mistral">Mistral</option>
-                <option value="together">Together</option>
-                <option value="fireworks">Fireworks</option>
-                <option value="deepinfra">DeepInfra</option>
-                <option value="perplexity">Perplexity</option>
-                <option value="merge">Merge Gateway</option>
-                <option value="tokenrouter">TokenRouter</option>
-                <option value="groq">Groq</option>
-                <option value="xai">xAI (Grok)</option>
-                <option value="deepseek">DeepSeek</option>
-                <option value="cerebras">Cerebras</option>
-                <option value="custom">Custom</option>
-              </select>
-            </div>
-            <div className="space-y-1">
-              <Label>Name</Label>
-              <Input value={name} onChange={(e) => setName(e.target.value)} required />
-            </div>
-            <div className="space-y-1">
-              <Label>Base URL</Label>
-              <Input value={baseUrl} onChange={(e) => setBaseUrl(e.target.value)} required />
-            </div>
-            <div className="space-y-1">
-              <Label>API key</Label>
-              <Input
-                type="password"
-                value={apiKey}
-                onChange={(e) => setApiKey(e.target.value)}
-                required
-              />
-            </div>
-            <div className="space-y-1">
-              <Label>Model name</Label>
-              <Input
-                value={modelName}
-                onChange={(e) => setModelName(e.target.value)}
-                placeholder="e.g. gpt-4o-mini"
-                required
-              />
-            </div>
-            <div className="space-y-1">
-              <Label>Auth style</Label>
-              <select
-                className="flex h-10 w-full rounded-md border border-zinc-700 bg-zinc-900 px-3 text-sm"
-                value={authStyle}
-                onChange={(e) => setAuthStyle(e.target.value)}
-              >
-                <option value="bearer">bearer</option>
-                <option value="modal_proxy">modal_proxy</option>
-                <option value="custom">custom</option>
-              </select>
-            </div>
-            {healthMsg && <p className="text-sm text-emerald-400">{healthMsg}</p>}
-            {error && <p className="text-sm text-red-400 break-all">{error}</p>}
-            <div className="flex gap-2">
-              <Button
-                type="button"
-                variant="outline"
-                className="flex-1"
-                disabled={testing || !apiKey}
-                onClick={onTest}
-              >
-                {testing ? "Testing…" : "Test key"}
-              </Button>
-              <Button type="submit" disabled={busy} className="flex-1">
-                {busy ? "Saving…" : "Save provider"}
-              </Button>
-            </div>
-          </form>
-        </CardContent>
-      </Card>
     </div>
   );
 }

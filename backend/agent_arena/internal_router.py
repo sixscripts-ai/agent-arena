@@ -23,8 +23,12 @@ _RATE_LIMIT = 120  # calls per battle per minute
 
 
 def require_internal_key(x_internal_key: str | None = Header(default=None)) -> bool:
+    import hmac
+
     expected = settings().get("INTERNAL_API_KEY") or ""
-    if not expected or x_internal_key != expected:
+    if not expected:
+        raise HTTPException(status_code=401, detail="internal key not configured")
+    if not x_internal_key or not hmac.compare_digest(x_internal_key, expected):
         raise HTTPException(status_code=401, detail="invalid internal key")
     return True
 
@@ -33,6 +37,11 @@ def _rate_limit(battle_id: str) -> None:
     now = time.time()
     with _rate_lock:
         window = [t for t in _rate_counts[battle_id] if now - t < 60]
+        # cleanup old battles to prevent memory leak
+        if len(_rate_counts) > 1000:
+            for bid in list(_rate_counts.keys()):
+                if bid != battle_id and not _rate_counts[bid]:
+                    del _rate_counts[bid]
         if len(window) >= _RATE_LIMIT:
             raise HTTPException(status_code=429, detail="internal rate limit exceeded")
         window.append(now)
