@@ -118,7 +118,7 @@ HOST_PROVIDERS: list[dict] = [
         "base_url": "https://api.tokenrouter.com/v1",
         "masked_key": "sk-…",
         "auth_style": "bearer",
-        "model_name": "moonshotai/kimi-k3",
+        "model_name": "moonshotai/kimi-k3-free",
         "cred": "tokenrouter",
     },
     {

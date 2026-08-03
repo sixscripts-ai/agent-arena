@@ -90,7 +90,15 @@ def _host_judge_spec() -> tuple[str, str, str, str]:
                     DEFAULT_JUDGE_MODEL,
                 )
     # Fallback chain if Modal proxy not configured / incomplete:
-    # 1) Groq (fast, generous) -> 2) DeepSeek -> 3) OpenRouter Free
+    # 1) TokenRouter Kimi-K3-Free (user says only this works) -> 2) Groq -> 3) DeepSeek -> 4) OpenRouter Free
+    tr_key = s.get("HOST_TOKENROUTER_KEY") or ""
+    if tr_key:
+        return (
+            "https://api.tokenrouter.com/v1",
+            "bearer",
+            tr_key,
+            "moonshotai/kimi-k3-free",
+        )
     groq_key = s.get("HOST_GROQ_KEY") or ""
     if groq_key:
         return (
