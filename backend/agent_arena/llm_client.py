@@ -8,12 +8,29 @@ from fastapi import HTTPException
 
 def build_headers(auth_style: str, api_key: str) -> dict[str, str]:
     if auth_style == "modal_proxy":
-        parts = [p.strip() for p in api_key.split(":")]
-        if len(parts) != 2:
+        # New Modal proxy format: Bearer wk-...ws-... (dot)
+        # Old format: Modal-Key/Secret via colon wk-...:ws-...
+        api_key = api_key.strip()
+        if ":" in api_key:
+            parts = [p.strip() for p in api_key.split(":")]
+            if len(parts) == 2 and parts[0] and parts[1]:
+                return {"Modal-Key": parts[0], "Modal-Secret": parts[1]}
+        if "." in api_key and "wk-" in api_key and "ws-" in api_key:
+            return {"Authorization": f"Bearer {api_key}"}
+        if api_key.startswith("wk-") and "." not in api_key and ":" not in api_key:
             raise HTTPException(
-                status_code=400, detail="modal_proxy key must be 'wk-...:ws-...'"
+                status_code=400,
+                detail=(
+                    "modal_proxy token incomplete: you provided only wk- part. "
+                    "Modal proxy now requires 'Bearer wk-....ws-...' dot format. "
+                    "Generate a new proxy token in Modal dashboard → Settings → Proxy Auth Tokens, "
+                    "copy the full 'wk-....ws-...' string."
+                ),
             )
-        return {"Modal-Key": parts[0], "Modal-Secret": parts[1]}
+        raise HTTPException(
+            status_code=400,
+            detail="modal_proxy key must be 'wk-...:ws-...' (colon) or 'wk-...ws-...' (dot Bearer)",
+        )
     return {"Authorization": f"Bearer {api_key}"}
 
 

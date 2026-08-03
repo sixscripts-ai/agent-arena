@@ -62,11 +62,21 @@ def _clamp(score: float) -> float:
 
 def _host_judge_spec() -> tuple[str, str, str, str]:
     s = settings()
+    # New Bearer proxy token takes precedence: wk-xxx.ws-yyy
+    proxy_token = s.get("JUDGE_MODAL_PROXY_TOKEN") or ""
+    if proxy_token:
+        proxy_token = proxy_token.strip()
+        if "." in proxy_token and "wk-" in proxy_token and "ws-" in proxy_token:
+            return DEFAULT_JUDGE_BASE, "modal_proxy", proxy_token, DEFAULT_JUDGE_MODEL
+        if ":" in proxy_token:
+            return DEFAULT_JUDGE_BASE, "modal_proxy", proxy_token, DEFAULT_JUDGE_MODEL
     key = s.get("JUDGE_MODAL_KEY") or ""
     secret = s.get("JUDGE_MODAL_SECRET") or ""
     if not key or not secret:
         raise HTTPException(status_code=500, detail="Judge credentials not configured")
-    return DEFAULT_JUDGE_BASE, "modal_proxy", f"{key}:{secret}", DEFAULT_JUDGE_MODEL
+    # Support both old ak-/as- and new wk-/ws- as colon pair
+    combined = f"{key}:{secret}"
+    return DEFAULT_JUDGE_BASE, "modal_proxy", combined, DEFAULT_JUDGE_MODEL
 
 
 def judge_battle(
