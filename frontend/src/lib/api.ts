@@ -37,6 +37,20 @@ export const api = {
     request<ProviderOut[]>("/providers", { token }),
   createProvider: (token: string, body: ProviderCreate) =>
     request<ProviderOut>("/providers", { method: "POST", body, token }),
+  providerHealth: (
+    token: string,
+    body: {
+      base_url: string;
+      api_key: string;
+      auth_style: string;
+      model?: string;
+    },
+  ) =>
+    request<{ ok: boolean; status_code: number }>("/providers/health", {
+      method: "POST",
+      body,
+      token,
+    }),
   createBattle: (token: string, body: BattleCreate) =>
     request<{ id: string; status: string }>("/battles", {
       method: "POST",
@@ -73,8 +87,13 @@ export type FormatOut = {
   engine: string;
   description?: string;
   slug?: string;
+  roles?: string[];
   config?: string | Record<string, unknown>;
 };
+
+export function isHostProviderId(id: string): boolean {
+  return id.startsWith("host:");
+}
 
 export type ProviderOut = {
   id: string;
@@ -181,6 +200,9 @@ export async function streamBattle(
 }
 
 export function playableRoleCount(format: FormatOut): number {
+  if (Array.isArray(format.roles) && format.roles.length) {
+    return format.roles.filter((r) => r !== "judge").length;
+  }
   let cfg: Record<string, unknown> = {};
   if (typeof format.config === "string") {
     try {

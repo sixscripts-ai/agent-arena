@@ -1,9 +1,11 @@
 "use client";
 
 import { FormEvent, Suspense, useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
   api,
+  isHostProviderId,
   playableRoleCount,
   type FormatOut,
   type ProviderOut,
@@ -25,6 +27,45 @@ export default function NewBattlePage() {
   );
 }
 
+function ModelSelect({
+  value,
+  onChange,
+  host,
+  yours,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+  host: ProviderOut[];
+  yours: ProviderOut[];
+}) {
+  return (
+    <select
+      className="flex h-10 w-full rounded-md border border-zinc-700 bg-zinc-900 px-3 text-sm"
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+    >
+      {host.length > 0 && (
+        <optgroup label="Host models">
+          {host.map((p) => (
+            <option key={p.id} value={p.id}>
+              {p.name} ({p.model_name})
+            </option>
+          ))}
+        </optgroup>
+      )}
+      {yours.length > 0 && (
+        <optgroup label="Your providers">
+          {yours.map((p) => (
+            <option key={p.id} value={p.id}>
+              {p.name} ({p.model_name})
+            </option>
+          ))}
+        </optgroup>
+      )}
+    </select>
+  );
+}
+
 function NewBattleForm() {
   const { user, jwt, loading } = useAuth();
   const router = useRouter();
@@ -33,11 +74,15 @@ function NewBattleForm() {
   const [providers, setProviders] = useState<ProviderOut[]>([]);
   const [formatId, setFormatId] = useState(params.get("format") || "");
   const [selected, setSelected] = useState<string[]>([HOST_A, HOST_B]);
+  const [judgeId, setJudgeId] = useState<string>("");
   const [timeoutSec, setTimeoutSec] = useState(600);
   const [visibility, setVisibility] = useState<"isolated" | "open">("isolated");
   const [save, setSave] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+
+  const host = useMemo(() => providers.filter((p) => isHostProviderId(p.id)), [providers]);
+  const yours = useMemo(() => providers.filter((p) => !isHostProviderId(p.id)), [providers]);
 
   useEffect(() => {
     if (!loading && !user) router.replace("/login");
@@ -54,8 +99,7 @@ function NewBattleForm() {
         setSelected((prev) => {
           const ids = p.map((x) => x.id);
           if (!ids.length) return prev;
-          const next = prev.map((id, i) => (ids.includes(id) ? id : ids[Math.min(i, ids.length - 1)]));
-          return next;
+          return prev.map((id, i) => (ids.includes(id) ? id : ids[Math.min(i, ids.length - 1)]));
         });
       } catch (e) {
         setError(e instanceof Error ? e.message : "Load failed");
@@ -76,10 +120,6 @@ function NewBattleForm() {
     });
   }, [need, providers]);
 
-  const modelOptions = useMemo(() => {
-    return providers.map((p) => ({ id: p.id, label: `${p.name} (${p.model_name})` }));
-  }, [providers]);
-
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
     if (!jwt || !formatId) return;
@@ -93,6 +133,7 @@ function NewBattleForm() {
         timeout_seconds: timeoutSec,
         round_visibility: visibility,
         save,
+        judge_provider_id: judgeId || null,
       });
       try {
         const key = "arena_battle_ids";
@@ -114,6 +155,15 @@ function NewBattleForm() {
   return (
     <div className="mx-auto max-w-xl space-y-6">
       <h1 className="text-2xl font-semibold">Create battle</h1>
+      {!yours.length && (
+        <p className="rounded-md border border-zinc-800 bg-zinc-950/60 px-3 py-2 text-sm text-zinc-400">
+          Using host models only.{" "}
+          <Link href="/providers" className="text-emerald-400 hover:underline">
+            Add your own API key
+          </Link>{" "}
+          to put a personal model in a slot.
+        </p>
+      )}
       <Card>
         <CardHeader>
           <CardTitle className="text-base">Configuration</CardTitle>
@@ -140,23 +190,47 @@ function NewBattleForm() {
             {selected.map((mid, i) => (
               <div key={i} className="space-y-1">
                 <Label>Model slot {i + 1}</Label>
-                <select
-                  className="flex h-10 w-full rounded-md border border-zinc-700 bg-zinc-900 px-3 text-sm"
+                <ModelSelect
                   value={mid}
-                  onChange={(e) => {
+                  host={host}
+                  yours={yours}
+                  onChange={(v) => {
                     const next = [...selected];
-                    next[i] = e.target.value;
+                    next[i] = v;
                     setSelected(next);
                   }}
-                >
-                  {modelOptions.map((o) => (
-                    <option key={o.id} value={o.id}>
-                      {o.label}
-                    </option>
-                  ))}
-                </select>
+                />
               </div>
             ))}
+
+            <div className="space-y-1">
+              <Label>Judge (optional)</Label>
+              <select
+                className="flex h-10 w-full rounded-md border border-zinc-700 bg-zinc-900 px-3 text-sm"
+                value={judgeId}
+                onChange={(e) => setJudgeId(e.target.value)}
+              >
+                <option value="">Default host judge (Kimi-K3)</option>
+                {host.length > 0 && (
+                  <optgroup label="Host models">
+                    {host.map((p) => (
+                      <option key={p.id} value={p.id}>
+                        {p.name} ({p.model_name})
+                      </option>
+                    ))}
+                  </optgroup>
+                )}
+                {yours.length > 0 && (
+                  <optgroup label="Your providers">
+                    {yours.map((p) => (
+                      <option key={p.id} value={p.id}>
+                        {p.name} ({p.model_name})
+                      </option>
+                    ))}
+                  </optgroup>
+                )}
+              </select>
+            </div>
 
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1">

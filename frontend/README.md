@@ -1,36 +1,43 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Agent Arena Frontend
 
-## Getting Started
+Next.js App Router UI for Agent Arena. Auth via Appwrite; battles/providers/leaderboard via Modal FastAPI.
 
-First, run the development server:
+## Env
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+Copy `.env.example` → `.env.local`:
+
+```
+NEXT_PUBLIC_APPWRITE_ENDPOINT=https://sfo.cloud.appwrite.io/v1
+NEXT_PUBLIC_APPWRITE_PROJECT_ID=<project>
+NEXT_PUBLIC_MODAL_URL=https://aschenbrenerashton--agent-arena-backend-fastapi-app.modal.run
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Appwrite platforms
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+In the Appwrite console (project Integrations → Platforms), add Web platforms for:
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+- `localhost`
+- your Vercel production host (e.g. `agent-arena-blond.vercel.app`)
+- `*.vercel.app` for previews
 
-## Learn More
+Without these, browser signup/login/JWT will fail CORS / origin checks.
 
-To learn more about Next.js, take a look at the following resources:
+## BYOK flow
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+1. Sign up / log in
+2. **Providers** → pick a preset (OpenAI, OpenRouter, xAI, DeepSeek) → paste API key → **Test key** → **Save**
+3. **New Battle** → model slots show **Host models** and **Your providers** optgroups
+4. Optional judge override; Start battle → live SSE on `/battles/[id]`
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+Host models (Modal Kimi, OpenRouter free, …) need no user key. Your keys are Fernet-encrypted on the backend.
 
-## Deploy on Vercel
+## Dev
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+```bash
+npm install
+npm run dev
+```
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Deploy
+
+Vercel project root: `frontend/`. Set the three `NEXT_PUBLIC_*` env vars for Production/Preview.

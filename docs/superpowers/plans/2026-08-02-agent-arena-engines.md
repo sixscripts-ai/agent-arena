@@ -26,7 +26,7 @@
 - Modify: `backend/agent_arena/schema.py` (COLLECTIONS["providers"])
 - Run: `ensure_schema()` against live Appwrite
 
-- [ ] **Step 1: Add model_name to COLLECTIONS**
+- [x] **Step 1: Add model_name to COLLECTIONS**
 
 ```python
 "providers": [
@@ -35,13 +35,13 @@
 ],
 ```
 
-- [ ] **Step 2: Apply schema**
+- [x] **Step 2: Apply schema**
 
 ```bash
 cd backend && .venv/bin/python -c "from agent_arena.schema import ensure_schema; ensure_schema(); print('ok')"
 ```
 
-- [ ] **Step 3: Commit with Task 1**
+- [x] **Step 3: Commit with Task 1**
 
 ---
 
@@ -55,7 +55,7 @@ cd backend && .venv/bin/python -c "from agent_arena.schema import ensure_schema;
 - Consumes: existing ProviderCreate/Out
 - Produces: ProviderCreate.model_name, ProviderOut.model_name, synthetic HostFreeProvider
 
-- [ ] **Step 1: Add model_name to schemas**
+- [x] **Step 1: Add model_name to schemas**
 
 ```python
 # schemas.py
@@ -67,18 +67,18 @@ class ProviderCreate(BaseModel):
     model_name: str = Field(min_length=1, max_length=100)   # NEW
 ```
 
-- [ ] **Step 2: Run test to confirm failure**
+- [x] **Step 2: Run test to confirm failure**
 
 ```bash
 .venv/bin/python -m pytest tests/test_providers.py -q --tb=line
 # Expected: FAIL (missing model_name in request)
 ```
 
-- [ ] **Step 3: Update ProviderOut and list/create**
+- [x] **Step 3: Update ProviderOut and list/create**
 
 Edit `providers.py` to include `model_name` in payload and response.
 
-- [ ] **Step 4: Add synthetic host free provider**
+- [x] **Step 4: Add synthetic host free provider**
 
 ```python
 # providers.py
@@ -94,14 +94,14 @@ HOST_FREE = {
 
 In `list_providers`, prepend HOST_FREE (read-only).
 
-- [ ] **Step 5: Run tests**
+- [x] **Step 5: Run tests**
 
 ```bash
 .venv/bin/python -m pytest tests/test_providers.py -q
 # Expected: PASS
 ```
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add backend/agent_arena/schemas.py backend/agent_arena/providers.py
@@ -116,7 +116,7 @@ git commit -m "feat(providers): add model_name + host free provider"
 **Interfaces:**
 - Produces: `get_model_call_spec(model_id: str, user_id: str) -> tuple[str, str, str, str]`
 
-- [ ] **Step 1: Write failing test**
+- [x] **Step 1: Write failing test**
 
 ```python
 # tests/test_providers.py
@@ -125,7 +125,7 @@ def test_get_model_call_spec_host_free():
     assert spec[3] == "nvidia/nemotron-3-ultra-550b-a55b:free"
 ```
 
-- [ ] **Step 2: Implement helper**
+- [x] **Step 2: Implement helper**
 
 ```python
 def get_model_call_spec(model_id: str, user_id: str):
@@ -136,14 +136,14 @@ def get_model_call_spec(model_id: str, user_id: str):
     ...
 ```
 
-- [ ] **Step 3: Run test**
+- [x] **Step 3: Run test**
 
 ```bash
 .venv/bin/python -m pytest tests/test_providers.py::test_get_model_call_spec_host_free -q
 # Expected: PASS
 ```
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add backend/agent_arena/providers.py tests/test_providers.py
@@ -160,7 +160,7 @@ git commit -m "feat(providers): get_model_call_spec with host free support"
 - Consumes: format roles from Appwrite
 - Produces: validated model_ids (len == playable_roles), judge_provider_id optional
 
-- [ ] **Step 1: Add judge_provider_id to BattleCreate**
+- [x] **Step 1: Add judge_provider_id to BattleCreate**
 
 ```python
 class BattleCreate(BaseModel):
@@ -168,14 +168,14 @@ class BattleCreate(BaseModel):
     judge_provider_id: str | None = None
 ```
 
-- [ ] **Step 2: Write failing test for role length**
+- [x] **Step 2: Write failing test for role length**
 
 ```python
 def test_create_battle_wrong_role_count():
     # 2 models for a 3-role format → 400
 ```
 
-- [ ] **Step 3: Implement validation in create_battle**
+- [x] **Step 3: Implement validation in create_battle**
 
 ```python
 format_doc = databases.get_document(...)
@@ -189,14 +189,14 @@ for mid in body.model_ids:
         ...
 ```
 
-- [ ] **Step 4: Run tests**
+- [x] **Step 4: Run tests**
 
 ```bash
 .venv/bin/python -m pytest tests/test_battles.py -q -k "role or create"
 # Expected: PASS
 ```
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add backend/agent_arena/schemas.py backend/agent_arena/battles.py
@@ -211,7 +211,7 @@ git commit -m "feat(battles): role-preserving model mapping + host free validati
 **Interfaces:**
 - Produces: APIRouter with dependency `require_internal_key`
 
-- [ ] **Step 1: Create router with hidden tag**
+- [x] **Step 1: Create router with hidden tag**
 
 ```python
 from fastapi import APIRouter, Header, HTTPException, Depends
@@ -224,21 +224,21 @@ def require_internal_key(x_internal_key: str = Header(None)):
     return True
 ```
 
-- [ ] **Step 2: Wire into main.py (after other routers)**
+- [x] **Step 2: Wire into main.py (after other routers)**
 
 ```python
 from .internal_router import router as internal_router
 app.include_router(internal_router)
 ```
 
-- [ ] **Step 3: Run server smoke**
+- [x] **Step 3: Run server smoke**
 
 ```bash
 .venv/bin/python -m uvicorn agent_arena.main:app --port 8001 &
 curl -s http://localhost:8001/docs | grep -c internal || echo "hidden OK"
 ```
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add backend/agent_arena/internal_router.py backend/agent_arena/main.py
@@ -254,14 +254,14 @@ git commit -m "feat(internal): router skeleton + X-Internal-Key auth"
 - Consumes: get_model_call_spec
 - Produces: POST /internal/model → LLM response
 
-- [ ] **Step 1: Write test with fake httpx**
+- [x] **Step 1: Write test with fake httpx**
 
 ```python
 def test_internal_model(monkeypatch):
     ...
 ```
 
-- [ ] **Step 2: Implement with per-battle validation**
+- [x] **Step 2: Implement with per-battle validation**
 
 ```python
 @router.post("/model")
@@ -276,14 +276,14 @@ def internal_model(body: dict, _=Depends(require_internal_key)):
     ...
 ```
 
-- [ ] **Step 3: Run test**
+- [x] **Step 3: Run test**
 
 ```bash
 .venv/bin/python -m pytest tests/test_internal.py -q
 # Expected: PASS
 ```
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add backend/agent_arena/internal_router.py
@@ -299,15 +299,15 @@ git commit -m "feat(internal): /internal/model with battle validation"
 **Interfaces:**
 - Produces: POST /internal/judge → scores + justifications (redacted)
 
-- [ ] **Step 1: Port judge.py logic into judge.py module with retry, guarded json, redaction**
+- [x] **Step 1: Port judge.py logic into judge.py module with retry, guarded json, redaction**
 
 (Include the exact ported + fixed code in the task — ~80 lines)
 
-- [ ] **Step 2: Wire /internal/judge to use it**
+- [x] **Step 2: Wire /internal/judge to use it**
 
-- [ ] **Step 3: Add tests for redaction + retry**
+- [x] **Step 3: Add tests for redaction + retry**
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add backend/agent_arena/judge.py backend/agent_arena/internal_router.py
@@ -323,7 +323,7 @@ git commit -m "feat(judge): real Kimi-K3 judge with retry/redaction"
 **Interfaces:**
 - Produces: redacted artifact persisted + published with uuid
 
-- [ ] **Step 1: Implement /internal/round**
+- [x] **Step 1: Implement /internal/round**
 
 ```python
 @router.post("/round")
@@ -333,22 +333,22 @@ def internal_round(body: dict, _=Depends(require_internal_key)):
     # event_bus.publish with uuid + created_at
 ```
 
-- [ ] **Step 2: Update event_bus to use uuid + created_at (no seq)**
+- [x] **Step 2: Update event_bus to use uuid + created_at (no seq)**
 
-- [ ] **Step 3: Run redaction + round tests**
+- [x] **Step 3: Run redaction + round tests**
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ### Task 8: SSE stream merge (uuid dedupe + sort)
 
 **Files:**
 - Modify: `backend/agent_arena/battles.py:200-260` (stream endpoint)
 
-- [ ] **Step 1: Implement merged snapshot + bus with dedupe**
+- [x] **Step 1: Implement merged snapshot + bus with dedupe**
 
-- [ ] **Step 2: Test reconnect scenario**
+- [x] **Step 2: Test reconnect scenario**
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ### Task 9: Sandbox runner package (runner.py + client.py)
 
@@ -359,33 +359,33 @@ def internal_round(body: dict, _=Depends(require_internal_key)):
 **Interfaces:**
 - runner.run_battle(battle_id) using injected transport
 
-- [ ] **Step 1: Write runner with fake transport test (hermetic)**
+- [x] **Step 1: Write runner with fake transport test (hermetic)**
 
-- [ ] **Step 2: Implement phase loop, role mapping, judge skip, /internal calls**
+- [x] **Step 2: Implement phase loop, role mapping, judge skip, /internal calls**
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ### Task 10: Executors for 4 engines + scripted
 
 **Files:**
 - Create: `backend/agent_arena/sandbox/executors/*.py`
 
-- [ ] **Step 1: Implement same_target_race, direct_duel, agent_vs_agent, scripted**
+- [x] **Step 1: Implement same_target_race, direct_duel, agent_vs_agent, scripted**
 
-- [ ] **Step 2: Unit test each with fake model responses**
+- [x] **Step 2: Unit test each with fake model responses**
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ### Task 11: Format 3 executor (full powers, 180s)
 
 **Files:**
 - Create: `backend/agent_arena/sandbox/executors/build_and_break.py`
 
-- [ ] **Step 1: Subprocess runner with 180s timeout, workdir, capture, win condition**
+- [x] **Step 1: Subprocess runner with 180s timeout, workdir, capture, win condition**
 
-- [ ] **Step 2: Unit test escape detection**
+- [x] **Step 2: Unit test escape detection**
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ### Task 12: Modal sandbox spawn + sandbox_id tracking
 
@@ -393,35 +393,35 @@ def internal_round(body: dict, _=Depends(require_internal_key)):
 - Modify: `backend/agent_arena/battles.py:120-180`
 - Modify: `backend/modal_entry.py`
 
-- [ ] **Step 1: On battle start, spawn Modal Sandbox with runner entrypoint + INTERNAL_API_KEY secret**
+- [x] **Step 1: On battle start, spawn Modal Sandbox with runner entrypoint + INTERNAL_API_KEY secret**
 
-- [ ] **Step 2: Store sandbox_id on battle doc**
+- [x] **Step 2: Store sandbox_id on battle doc**
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ### Task 13: Cancel force-stop + timeout watchdog
 
 **Files:**
 - Modify: `backend/agent_arena/battles.py:180-220`
 
-- [ ] **Step 1: /cancel calls sandbox.stop() + status=cancelled**
+- [x] **Step 1: /cancel calls sandbox.stop() + status=cancelled**
 
-- [ ] **Step 2: In-sandbox watchdog + backend backstop**
+- [x] **Step 2: In-sandbox watchdog + backend backstop**
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ### Task 14: Update tests (hermetic + modal marker)
 
 **Files:**
 - Modify: `backend/tests/conftest.py`, `test_battles.py`, add `test_modal_sandbox.py`
 
-- [ ] **Step 1: Add pytest.ini marker modal**
+- [x] **Step 1: Add pytest.ini marker modal**
 
-- [ ] **Step 2: One real sandbox test (format 9) marked modal, skipped by default**
+- [x] **Step 2: One real sandbox test (format 9) marked modal, skipped by default**
 
-- [ ] **Step 3: Run fast suite (42+ tests)**
+- [x] **Step 3: Run fast suite (42+ tests)**
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ### Task 15: Env + deploy updates
 
@@ -429,11 +429,11 @@ def internal_round(body: dict, _=Depends(require_internal_key)):
 - Modify: `.env.example`
 - Modify: `modal_entry.py`
 
-- [ ] **Step 1: Add INTERNAL_API_KEY, JUDGE_*, HOST_OPENROUTER_KEY**
+- [x] **Step 1: Add INTERNAL_API_KEY, JUDGE_*, HOST_OPENROUTER_KEY**
 
-- [ ] **Step 2: Deploy and verify /health + one internal route (401 without key)**
+- [x] **Step 2: Deploy and verify /health + one internal route (401 without key)**
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ---
 

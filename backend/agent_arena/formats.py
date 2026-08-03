@@ -22,6 +22,8 @@ def list_formats(_user_id: str = Depends(get_current_user)):
             "engine": cfg["engine"],
             "description": cfg["description"],
             "slug": cfg["id"],
+            "roles": cfg.get("roles", []),
+            "config": cfg,
         })
     out.sort(key=lambda f: f["name"])
     return out

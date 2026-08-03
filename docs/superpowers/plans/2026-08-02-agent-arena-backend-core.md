@@ -82,7 +82,7 @@ Routers are flat domain modules (`providers.py`, `formats.py`, `battles.py`, `le
 - Consumes: nothing.
 - Produces: `agent_arena.config.settings() -> dict` (cached, raises on missing Appwrite env vars); FastAPI app `agent_arena.main.app` with `GET /health`; pytest working with `TestClient`.
 
-- [ ] **Step 1: Create `backend/pyproject.toml`**
+- [x] **Step 1: Create `backend/pyproject.toml`**
 
 ```toml
 [project]
@@ -114,14 +114,14 @@ include = ["agent_arena*"]
 testpaths = ["tests"]
 ```
 
-- [ ] **Step 2: Create `backend/agent_arena/__init__.py`**
+- [x] **Step 2: Create `backend/agent_arena/__init__.py`**
 
 ```python
 """Agent Arena backend package."""
 __version__ = "0.1.0"
 ```
 
-- [ ] **Step 3: Create `backend/agent_arena/config.py`**
+- [x] **Step 3: Create `backend/agent_arena/config.py`**
 
 ```python
 import os
@@ -155,7 +155,7 @@ def settings() -> dict:
     }
 ```
 
-- [ ] **Step 4: Create `backend/agent_arena/main.py`**
+- [x] **Step 4: Create `backend/agent_arena/main.py`**
 
 ```python
 from fastapi import FastAPI
@@ -178,7 +178,7 @@ def health():
     return {"status": "ok", "project": settings()["APPWRITE_PROJECT_ID"]}
 ```
 
-- [ ] **Step 5: Create `backend/tests/conftest.py`**
+- [x] **Step 5: Create `backend/tests/conftest.py`**
 
 ```python
 import os
@@ -200,7 +200,7 @@ def make_user_id() -> str:
     return f"test-{uuid.uuid4().hex[:16]}"
 ```
 
-- [ ] **Step 6: Create `backend/tests/test_health.py`**
+- [x] **Step 6: Create `backend/tests/test_health.py`**
 
 ```python
 from fastapi.testclient import TestClient
@@ -217,7 +217,7 @@ def test_health():
     assert body["project"]
 ```
 
-- [ ] **Step 7: Set up virtualenv, install, and verify tests run**
+- [x] **Step 7: Set up virtualenv, install, and verify tests run**
 
 Run:
 ```bash
@@ -229,7 +229,7 @@ python3.11 -m venv .venv
 
 Expected: `test_health` PASSES (Appwrite credentials exist in `.env`). If `.env` is missing, create it from `.env.example` and fill the four Appwrite values.
 
-- [ ] **Step 8: Add backend env vars to repo-root `.env.example`**
+- [x] **Step 8: Add backend env vars to repo-root `.env.example`**
 
 ```bash
 # --- Backend (Modal) ---
@@ -240,7 +240,7 @@ APPWRITE_API_KEY=
 FERNET_KEY=
 ```
 
-- [ ] **Step 9: Commit**
+- [x] **Step 9: Commit**
 
 ```bash
 git add backend .env.example
@@ -263,7 +263,7 @@ git commit -m "feat(backend): scaffold FastAPI app with config and health check"
   - `expected_score(ra: float, rb: float) -> float`
   - `update_ratings(ra: float, rb: float, score_a: float) -> tuple[float, float]` — `score_a` is 1.0 for A win, 0.0 for A loss, 0.5 for draw; returns `(new_a, new_b)` rounded to 2 decimals.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 `backend/tests/test_elo.py`:
 ```python
@@ -300,12 +300,12 @@ def test_loss_lowers_rating():
     assert new_a < 1200.0
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `.venv/bin/python -m pytest tests/test_elo.py -v`
 Expected: FAIL with `ModuleNotFoundError: No module named 'agent_arena.elo'`
 
-- [ ] **Step 3: Write the implementation**
+- [x] **Step 3: Write the implementation**
 
 `backend/agent_arena/elo.py`:
 ```python
@@ -324,12 +324,12 @@ def update_ratings(ra: float, rb: float, score_a: float) -> tuple[float, float]:
     return round(new_a, 2), round(new_b, 2)
 ```
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Run: `.venv/bin/python -m pytest tests/test_elo.py -v`
 Expected: PASS (5 passed)
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add backend/agent_arena/elo.py backend/tests/test_elo.py
@@ -352,7 +352,7 @@ git commit -m "feat(backend): add Elo rating math"
   - `redact(text: str) -> str`
   - `sanitize_artifact(text: str, max_bytes: int = ARTIFACT_MAX_BYTES) -> str` — truncates to `max_bytes`, then redacts.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 `backend/tests/test_redact.py`:
 ```python
@@ -393,12 +393,12 @@ def test_truncates_oversized_artifact():
     assert len(out.encode()) <= 100_000
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `.venv/bin/python -m pytest tests/test_redact.py -v`
 Expected: FAIL with `ModuleNotFoundError: No module named 'agent_arena.redact'`
 
-- [ ] **Step 3: Write the implementation**
+- [x] **Step 3: Write the implementation**
 
 `backend/agent_arena/redact.py`:
 ```python
@@ -425,12 +425,12 @@ def sanitize_artifact(text: str, max_bytes: int = ARTIFACT_MAX_BYTES) -> str:
     return redact(truncated)
 ```
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Run: `.venv/bin/python -m pytest tests/test_redact.py -v`
 Expected: PASS (4 passed)
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add backend/agent_arena/redact.py backend/tests/test_redact.py
@@ -453,7 +453,7 @@ git commit -m "feat(backend): add artifact redaction and size caps"
   - `decrypt_key(token: str, key: bytes) -> str`
   - `mask_key(plaintext: str) -> str` — `first4 + "********" + last4` for len > 8, else all asterisks.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 `backend/tests/test_crypto.py`:
 ```python
@@ -488,12 +488,12 @@ def test_mask():
     assert "sk-abcdefghijkl1234" not in mask_key("sk-abcdefghijkl1234")
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `.venv/bin/python -m pytest tests/test_crypto.py -v`
 Expected: FAIL with `ModuleNotFoundError: No module named 'agent_arena.crypto'`
 
-- [ ] **Step 3: Write the implementation**
+- [x] **Step 3: Write the implementation**
 
 `backend/agent_arena/crypto.py`:
 ```python
@@ -521,12 +521,12 @@ def mask_key(plaintext: str) -> str:
     return f"{plaintext[:4]}{'*' * 8}{plaintext[-4:]}"
 ```
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Run: `.venv/bin/python -m pytest tests/test_crypto.py -v`
 Expected: PASS (4 passed)
 
-- [ ] **Step 5: Generate a FERNET_KEY into `.env`**
+- [x] **Step 5: Generate a FERNET_KEY into `.env`**
 
 Run:
 ```bash
@@ -535,7 +535,7 @@ python3 -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().
 ```
 Copy the output into `.env` as `FERNET_KEY=<value>` (append if not present). Do not commit `.env`.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add backend/agent_arena/crypto.py backend/tests/test_crypto.py
@@ -561,7 +561,7 @@ git commit -m "feat(backend): add Fernet encryption and masking for provider key
   - `ensure_schema() -> None` — idempotently create collections + attributes in the Appwrite database.
   - `TEARDOWN_COLLECTIONS = [...]` — test-only cleanup list.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 `backend/tests/test_schema.py`:
 ```python
@@ -586,12 +586,12 @@ def test_ensure_schema_creates_collections():
     assert set(COLLECTIONS) <= ids
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `.venv/bin/python -m pytest tests/test_schema.py -v`
 Expected: FAIL with `ModuleNotFoundError: No module named 'agent_arena.db'`
 
-- [ ] **Step 3: Write `backend/agent_arena/db.py`**
+- [x] **Step 3: Write `backend/agent_arena/db.py`**
 
 ```python
 from appwrite.client import Client
@@ -618,7 +618,7 @@ def get_database_id() -> str:
     return settings()["APPWRITE_DATABASE_ID"]
 ```
 
-- [ ] **Step 4: Write `backend/agent_arena/schema.py`**
+- [x] **Step 4: Write `backend/agent_arena/schema.py`**
 
 ```python
 from . import db
@@ -710,12 +710,12 @@ def ensure_schema() -> None:
                 _create_attribute(databases, database_id, collection_id, name, type_, required)
 ```
 
-- [ ] **Step 5: Run test to verify it passes**
+- [x] **Step 5: Run test to verify it passes**
 
 Run: `.venv/bin/python -m pytest tests/test_schema.py -v`
 Expected: PASS (2 passed; the integration test creates the collections in Appwrite). If Appwrite rejects `permissions=[]`, retry with `permissions=["read(\"any\")", "create(\"any\")", "update(\"any\")", "delete(\"any\")"]` — the backend API key has full access either way.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add backend/agent_arena/db.py backend/agent_arena/schema.py backend/tests/test_schema.py
@@ -740,7 +740,7 @@ git commit -m "feat(backend): add Appwrite client and idempotent schema setup"
   - `seed_formats() -> int` — upsert all 25 into Appwrite `formats` (keyed by `id` stored in `name` field); returns count.
   - Router: `GET /formats` → list of format summaries (id, name, engine, description).
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 `backend/tests/test_seed_formats.py`:
 ```python
@@ -787,12 +787,12 @@ def test_ids_are_unique():
     assert len(ids) == len(set(ids))
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `.venv/bin/python -m pytest tests/test_seed_formats.py -v`
 Expected: FAIL with `ModuleNotFoundError: No module named 'agent_arena.seed_formats'`
 
-- [ ] **Step 3: Write `backend/agent_arena/seed_formats.py`**
+- [x] **Step 3: Write `backend/agent_arena/seed_formats.py`**
 
 ```python
 import json
@@ -945,7 +945,7 @@ def seed_formats() -> int:
     return count
 ```
 
-- [ ] **Step 4: Write `backend/agent_arena/formats.py`**
+- [x] **Step 4: Write `backend/agent_arena/formats.py`**
 
 ```python
 import json
@@ -970,7 +970,7 @@ def list_formats(_user_id: str = get_current_user):
     return out
 ```
 
-- [ ] **Step 5: Run tests to verify they pass**
+- [x] **Step 5: Run tests to verify they pass**
 
 Run:
 ```bash
@@ -978,7 +978,7 @@ Run:
 ```
 Expected: PASS (6 passed). The `seed_formats()` upsert itself is exercised in Task 13's end-to-end test.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add backend/agent_arena/seed_formats.py backend/agent_arena/formats.py backend/tests/test_seed_formats.py
@@ -998,7 +998,7 @@ git commit -m "feat(backend): seed 25 format configs and list endpoint"
 - Produces:
   - `get_current_user(authorization: str | None = Header(None)) -> str` — parses `Bearer <jwt>`, verifies via Appwrite `Account.get()` with the JWT as session, returns Appwrite user `$id`. Raises `HTTPException(401)` otherwise.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 `backend/tests/test_auth.py`:
 ```python
@@ -1060,12 +1060,12 @@ def test_invalid_jwt_rejected(monkeypatch):
     assert resp.status_code == 401
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `.venv/bin/python -m pytest tests/test_auth.py -v`
 Expected: FAIL with `ModuleNotFoundError: No module named 'agent_arena.auth'`
 
-- [ ] **Step 3: Write the implementation**
+- [x] **Step 3: Write the implementation**
 
 `backend/agent_arena/auth.py`:
 ```python
@@ -1088,12 +1088,12 @@ def get_current_user(authorization: str | None = Header(default=None)) -> str:
     return account["$id"]
 ```
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Run: `.venv/bin/python -m pytest tests/test_auth.py -v`
 Expected: PASS (4 passed)
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add backend/agent_arena/auth.py backend/tests/test_auth.py
@@ -1117,7 +1117,7 @@ git commit -m "feat(backend): add Appwrite JWT auth dependency"
   - Router `providers.router`: `POST /providers` (upsert by `user_id`+`name`), `GET /providers` (masked list), `POST /providers/health` (live key test).
   - Providers collection docs: `{user_id, name, base_url, encrypted_key, masked_key, auth_style}`.
 
-- [ ] **Step 1: Write `backend/agent_arena/schemas.py`**
+- [x] **Step 1: Write `backend/agent_arena/schemas.py`**
 
 ```python
 from pydantic import BaseModel, Field
@@ -1154,7 +1154,7 @@ class BattleCreate(BaseModel):
     save: bool = False
 ```
 
-- [ ] **Step 2: Write the failing test**
+- [x] **Step 2: Write the failing test**
 
 `backend/tests/test_providers.py`:
 ```python
@@ -1229,7 +1229,7 @@ def test_provider_health_bad_endpoint(client):
     app.dependency_overrides.clear()
 ```
 
-- [ ] **Step 3: Write `backend/agent_arena/providers.py`**
+- [x] **Step 3: Write `backend/agent_arena/providers.py`**
 
 ```python
 import httpx
@@ -1328,7 +1328,7 @@ def provider_health(body: ProviderHealth, _user_id: str = Depends(get_current_us
     return {"ok": True, "status_code": resp.status_code}
 ```
 
-- [ ] **Step 4: Wire the router into `backend/agent_arena/main.py`**
+- [x] **Step 4: Wire the router into `backend/agent_arena/main.py`**
 
 Replace the imports block and add include_router:
 
@@ -1356,12 +1356,12 @@ def health():
     return {"status": "ok", "project": settings()["APPWRITE_PROJECT_ID"]}
 ```
 
-- [ ] **Step 5: Run tests to verify they pass**
+- [x] **Step 5: Run tests to verify they pass**
 
 Run: `.venv/bin/python -m pytest tests/test_providers.py -v`
 Expected: PASS (2 passed). Uses the real Appwrite project; creates and cleans up its own documents.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add backend/agent_arena/schemas.py backend/agent_arena/providers.py backend/tests/test_providers.py backend/agent_arena/main.py
@@ -1390,7 +1390,7 @@ git commit -m "feat(backend): add provider CRUD and health check"
   - `battles.MAX_ACTIVE_BATTLES = 5`
   - Router: `POST /battles` (201, returns `{id, status:"queued"}`), `GET /battles/{id}`, `GET /battles/{id}/artifacts`.
 
-- [ ] **Step 1: Write `backend/agent_arena/event_bus.py`**
+- [x] **Step 1: Write `backend/agent_arena/event_bus.py`**
 
 ```python
 import threading
@@ -1411,7 +1411,7 @@ def subscribe(battle_id: str) -> list[dict]:
         return list(_queues[battle_id])
 ```
 
-- [ ] **Step 2: Write `backend/agent_arena/mock_runner.py`**
+- [x] **Step 2: Write `backend/agent_arena/mock_runner.py`**
 
 ```python
 import hashlib
@@ -1485,7 +1485,7 @@ def run_battle(battle_id: str) -> None:
     event_bus.publish(battle_id, {"type": "battle_status", "data": {"status": "completed"}})
 ```
 
-- [ ] **Step 3: Write `backend/agent_arena/battles.py`**
+- [x] **Step 3: Write `backend/agent_arena/battles.py`**
 
 ```python
 import json
@@ -1575,7 +1575,7 @@ def get_artifacts(battle_id: str, user_id: str = Depends(get_current_user)):
     ]
 ```
 
-- [ ] **Step 4: Write the concurrency test**
+- [x] **Step 4: Write the concurrency test**
 
 `backend/tests/test_concurrency.py`:
 ```python
@@ -1624,7 +1624,7 @@ def test_active_count_and_cap_rejection(client):
         app.dependency_overrides.clear()
 ```
 
-- [ ] **Step 5: Wire the battles router into `backend/agent_arena/main.py`**
+- [x] **Step 5: Wire the battles router into `backend/agent_arena/main.py`**
 
 Update imports and add:
 
@@ -1634,7 +1634,7 @@ from . import battles, providers
 app.include_router(battles.router)
 ```
 
-- [ ] **Step 6: Run tests to verify they pass**
+- [x] **Step 6: Run tests to verify they pass**
 
 Run:
 ```bash
@@ -1642,7 +1642,7 @@ Run:
 ```
 Expected: PASS (2 passed).
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add backend/agent_arena/event_bus.py backend/agent_arena/mock_runner.py backend/agent_arena/battles.py backend/agent_arena/main.py backend/tests/test_concurrency.py
@@ -1663,7 +1663,7 @@ git commit -m "feat(backend): battle creation with mock runner and concurrency c
   - `POST /battles/{id}/cancel` → `{id, status:"cancelled"}` — sets status, publishes event, stops mock runner on its next phase check.
   - `POST /battles/{id}/save` → `{id, saved:true}` — sets `saved`, persists in-memory artifacts to `rounds`.
 
-- [ ] **Step 1: Add the cancel/save routes to `backend/agent_arena/battles.py`**
+- [x] **Step 1: Add the cancel/save routes to `backend/agent_arena/battles.py`**
 
 Append before the end of the file (after `get_artifacts`):
 
@@ -1696,7 +1696,7 @@ def save_battle(battle_id: str, user_id: str = Depends(get_current_user)):
 
 Note: route ordering matters — `/{battle_id}` is defined before `/{battle_id}/cancel`; FastAPI matches the literal paths first, so this works. The `GET /{battle_id}` handler must be declared BEFORE these POST handlers to avoid shadowing; verify order in the file.
 
-- [ ] **Step 2: Write the failing test**
+- [x] **Step 2: Write the failing test**
 
 `backend/tests/test_battles.py`:
 ```python
@@ -1814,12 +1814,12 @@ def test_other_user_cannot_act_on_battle(client):
         _logout()
 ```
 
-- [ ] **Step 3: Run tests to verify they pass**
+- [x] **Step 3: Run tests to verify they pass**
 
 Run: `.venv/bin/python -m pytest tests/test_battles.py -v`
 Expected: PASS (4 passed). If the cancel test is flaky because the mock runner finishes first, that is acceptable — the test asserts the cancel response, which is always valid.
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add backend/agent_arena/battles.py backend/tests/test_battles.py
@@ -1839,7 +1839,7 @@ git commit -m "feat(backend): battle cancel killswitch and save endpoints"
 - Produces:
   - `GET /battles/{id}/stream` — `EventSourceResponse`; replays queued events, then emits heartbeat or terminal `done` event. Event payload: `{"event": <type>, "data": <json>}`.
 
-- [ ] **Step 1: Add the stream route to `backend/agent_arena/battles.py`**
+- [x] **Step 1: Add the stream route to `backend/agent_arena/battles.py`**
 
 Add import at top:
 ```python
@@ -1876,7 +1876,7 @@ def stream_battle(battle_id: str, user_id: str = Depends(get_current_user)):
     return EventSourceResponse(event_generator())
 ```
 
-- [ ] **Step 2: Write the failing test**
+- [x] **Step 2: Write the failing test**
 
 `backend/tests/test_sse.py`:
 ```python
@@ -1913,12 +1913,12 @@ def test_stream_emits_ordered_events(client):
     assert text.index("event: phase_start") < text.index("event: artifact")
 ```
 
-- [ ] **Step 3: Run test to verify it passes**
+- [x] **Step 3: Run test to verify it passes**
 
 Run: `.venv/bin/python -m pytest tests/test_sse.py -v`
 Expected: PASS (1 passed). Note: because the mock runner already completed (background task) before the stream opens, the stream replays the full event log from the bus, then emits `done`.
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add backend/agent_arena/battles.py backend/tests/test_sse.py
@@ -1942,7 +1942,7 @@ git commit -m "feat(backend): SSE battle streaming via event bus"
   - `leaderboard.get_rankings(databases, database_id, format_id="overall") -> list[dict]` — `[{model_id, elo, games_played, rank}]` sorted desc.
   - Router: `GET /leaderboard?format=overall`.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 `backend/tests/test_leaderboard.py`:
 ```python
@@ -1985,12 +1985,12 @@ def test_overall_scope_tracks_separately():
     assert any(r["model_id"] == a for r in rankings)
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `.venv/bin/python -m pytest tests/test_leaderboard.py -v`
 Expected: FAIL with `ModuleNotFoundError: No module named 'agent_arena.leaderboard'`
 
-- [ ] **Step 3: Write `backend/agent_arena/leaderboard.py`**
+- [x] **Step 3: Write `backend/agent_arena/leaderboard.py`**
 
 ```python
 from appwrite.query import Query
@@ -2056,7 +2056,7 @@ def get_rankings(databases, database_id, format_id="overall") -> list[dict]:
     ]
 ```
 
-- [ ] **Step 4: Write `backend/agent_arena/leaderboard_router.py`**
+- [x] **Step 4: Write `backend/agent_arena/leaderboard_router.py`**
 
 ```python
 from fastapi import APIRouter, Depends
@@ -2072,7 +2072,7 @@ def get_leaderboard(format: str = "overall", _user_id: str = Depends(get_current
     return leaderboard.get_rankings(db.get_databases(), db.get_database_id(), format)
 ```
 
-- [ ] **Step 5: Wire router into `backend/agent_arena/main.py`**
+- [x] **Step 5: Wire router into `backend/agent_arena/main.py`**
 
 Update imports and add:
 
@@ -2082,12 +2082,12 @@ from . import battles, leaderboard_router, providers
 app.include_router(leaderboard_router.router)
 ```
 
-- [ ] **Step 6: Run tests to verify they pass**
+- [x] **Step 6: Run tests to verify they pass**
 
 Run: `.venv/bin/python -m pytest tests/test_leaderboard.py -v`
 Expected: PASS (2 passed).
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add backend/agent_arena/leaderboard.py backend/agent_arena/leaderboard_router.py backend/tests/test_leaderboard.py backend/agent_arena/main.py
@@ -2105,7 +2105,7 @@ git commit -m "feat(backend): Elo leaderboard with per-format and overall scopes
 - Consumes: everything built in Tasks 1–12.
 - Produces: an integration test that runs a full battle (create → completed → leaderboard updated → saved artifacts) against real Appwrite.
 
-- [ ] **Step 1: Write the test**
+- [x] **Step 1: Write the test**
 
 `backend/tests/test_e2e.py`:
 ```python
@@ -2155,7 +2155,7 @@ def test_full_battle_lifecycle(client):
         app.dependency_overrides.clear()
 ```
 
-- [ ] **Step 2: Run the full test suite**
+- [x] **Step 2: Run the full test suite**
 
 Run:
 ```bash
@@ -2163,7 +2163,7 @@ Run:
 ```
 Expected: ALL PASS. If any integration test fails due to Appwrite schema drift, run the failing test alone with `-v` and fix the schema/attribute in `schema.py`, then re-run.
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add backend/tests/test_e2e.py
@@ -2182,7 +2182,7 @@ git commit -m "test(backend): end-to-end battle lifecycle integration test"
 - Consumes: `agent_arena.main.app`.
 - Produces: Modal app `agent-arena-backend` that serves the FastAPI ASGI app; deployable with `modal deploy modal_entry.py`.
 
-- [ ] **Step 1: Write `backend/modal_entry.py`**
+- [x] **Step 1: Write `backend/modal_entry.py`**
 
 ```python
 import modal
@@ -2211,7 +2211,7 @@ def fastapi_app():
     return fastapi_application
 ```
 
-- [ ] **Step 2: Verify the app imports cleanly in a Modal sandbox**
+- [x] **Step 2: Verify the app imports cleanly in a Modal sandbox**
 
 Run:
 ```bash
@@ -2220,7 +2220,7 @@ modal run --detach modal_entry.py 2>&1 | tail -5 || true
 ```
 Expected: a running sandbox that imports `agent_arena.main` without error. If `from_dotenv` cannot find `.env` at `../.env`, adjust the path to the repo-root `.env` (it lives at `/Users/villain/modal/.env`).
 
-- [ ] **Step 3: Deploy**
+- [x] **Step 3: Deploy**
 
 Run:
 ```bash
@@ -2229,7 +2229,7 @@ modal deploy modal_entry.py
 ```
 Expected: output like `✓ Created ... agent-arena-backend ... https://aschenbrenerashton--agent-arena-backend.modal.run`.
 
-- [ ] **Step 4: Verify the deployed health endpoint**
+- [x] **Step 4: Verify the deployed health endpoint**
 
 Run:
 ```bash
@@ -2237,7 +2237,7 @@ curl -s https://aschenbrenerashton--agent-arena-backend.modal.run/health
 ```
 Expected: `{"status":"ok","project":"6a6f9133001ed182210d"}`
 
-- [ ] **Step 5: Update `.env.example` comment**
+- [x] **Step 5: Update `.env.example` comment**
 
 Append to the backend block in repo-root `.env.example`:
 
@@ -2245,7 +2245,7 @@ Append to the backend block in repo-root `.env.example`:
 # FERNET_KEY: generate with `python3 -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"`
 ```
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add backend/modal_entry.py .env.example
