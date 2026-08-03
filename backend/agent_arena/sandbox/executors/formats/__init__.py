@@ -42,12 +42,6 @@ from .arms_race import (
     ArmsRaceExecutor,
 )
 
-from .omni_code_sandbox import (
-    NAME as _NAME_OMNI,
-    SLUG as _SLUG_OMNI,
-    OmniCodeSandboxExecutor,
-)
-
 from .exploit_vs_patch import (
     NAME as _NAME_19,
     SLUG as _SLUG_19,
@@ -67,10 +61,4 @@ register(PayloadVsDetectionExecutor, _NAME_5, _SLUG_5)
 register(PolymorphVsSignatureExecutor, _NAME_16, _SLUG_16)
 register(CredReuseVsHardeningExecutor, _NAME_17, _SLUG_17)
 register(ArmsRaceExecutor, _NAME_11, _SLUG_11)
-register(OmniCodeSandboxExecutor, _NAME_OMNI, _SLUG_OMNI)
-register(
-    OmniCodeSandboxExecutor,
-    "Omni Build & Break - Full Toolbelt",
-    "omni-build-break-full-toolbelt",
-)
 register(ExploitVsPatchExecutor, _NAME_19, _SLUG_19)
