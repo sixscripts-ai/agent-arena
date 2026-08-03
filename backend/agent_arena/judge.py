@@ -62,19 +62,50 @@ def _clamp(score: float) -> float:
 
 def _host_judge_spec() -> tuple[str, str, str, str]:
     s = settings()
-    # New Bearer proxy token takes precedence: wk-xxx.ws-yyy
+    # New Bearer proxy token takes precedence: wk-xxx.ws-yyy (dot)
     proxy_token = s.get("JUDGE_MODAL_PROXY_TOKEN") or ""
     if proxy_token:
         proxy_token = proxy_token.strip()
         if "." in proxy_token and "wk-" in proxy_token and "ws-" in proxy_token:
             return DEFAULT_JUDGE_BASE, "modal_proxy", proxy_token, DEFAULT_JUDGE_MODEL
         if ":" in proxy_token:
-            return DEFAULT_JUDGE_BASE, "modal_proxy", proxy_token, DEFAULT_JUDGE_MODEL
+            parts = [p.strip() for p in proxy_token.split(":")]
+            if len(parts) == 2 and parts[0] and parts[1]:
+                return (
+                    DEFAULT_JUDGE_BASE,
+                    "modal_proxy",
+                    proxy_token,
+                    DEFAULT_JUDGE_MODEL,
+                )
+        # incomplete wk- only → fall through to fallback, not old ak/as
+        if proxy_token.startswith("wk-"):
+            pass  # incomplete, try fallback below
+        else:
+            # old ak/as colon pair still valid for some setups
+            if ":" in proxy_token:
+                return (
+                    DEFAULT_JUDGE_BASE,
+                    "modal_proxy",
+                    proxy_token,
+                    DEFAULT_JUDGE_MODEL,
+                )
+    # Fallback to OpenRouter Free if Modal proxy not configured / incomplete and HOST_OPENROUTER_KEY present
+    or_key = s.get("HOST_OPENROUTER_KEY") or ""
+    if or_key:
+        # use a free model that supports json_object reasonably well
+        return (
+            "https://openrouter.ai/api/v1",
+            "bearer",
+            or_key,
+            "nvidia/nemotron-3-nano-30b-a3b:free",
+        )
     key = s.get("JUDGE_MODAL_KEY") or ""
     secret = s.get("JUDGE_MODAL_SECRET") or ""
     if not key or not secret:
-        raise HTTPException(status_code=500, detail="Judge credentials not configured")
-    # Support both old ak-/as- and new wk-/ws- as colon pair
+        raise HTTPException(
+            status_code=500,
+            detail="Judge credentials not configured (no proxy token and no HOST_OPENROUTER_KEY fallback)",
+        )
     combined = f"{key}:{secret}"
     return DEFAULT_JUDGE_BASE, "modal_proxy", combined, DEFAULT_JUDGE_MODEL
 
