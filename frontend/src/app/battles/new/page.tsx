@@ -80,6 +80,7 @@ function NewBattleForm() {
   const [save, setSave] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [modelError, setModelError] = useState<string | null>(null);
 
   const host = useMemo(() => providers.filter((p) => isHostProviderId(p.id)), [providers]);
   const yours = useMemo(() => providers.filter((p) => !isHostProviderId(p.id)), [providers]);
@@ -111,6 +112,15 @@ function NewBattleForm() {
   const need = format ? playableRoleCount(format) : 2;
 
   useEffect(() => {
+    const allowed = new Set(providers.map((p) => p.id));
+    const nextSelected = selected.filter((id) => allowed.has(id) || id === HOST_A || id === HOST_B);
+
+    if (nextSelected.length !== selected.length) {
+      setModelError("One or more selected models are no longer available. Please choose a valid provider.");
+    } else {
+      setModelError(null);
+    }
+
     setSelected((prev) => {
       const fallback = providers[0]?.id || HOST_A;
       const alt = providers[1]?.id || HOST_B;
@@ -118,13 +128,21 @@ function NewBattleForm() {
       while (next.length < need) next.push(next.length === 1 ? alt : fallback);
       return next;
     });
-  }, [need, providers]);
+  }, [need, providers, selected]);
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
     if (!jwt || !formatId) return;
+    const allowed = new Set(providers.map((p) => p.id));
+    const invalid = selected.some((id) => !allowed.has(id) && id !== HOST_A && id !== HOST_B);
+    if (invalid) {
+      setModelError("Please choose a valid provider for every model slot before starting the battle.");
+      return;
+    }
+
     setBusy(true);
     setError(null);
+    setModelError(null);
     try {
       const battle = await api.createBattle(jwt, {
         format_id: formatId,
@@ -266,6 +284,7 @@ function NewBattleForm() {
             </label>
 
             {error && <p className="text-sm text-red-400 break-all">{error}</p>}
+            {modelError && <p className="text-sm text-amber-400">{modelError}</p>}
             <Button type="submit" className="w-full" disabled={busy || !formatId}>
               {busy ? "Starting…" : "Start battle"}
             </Button>

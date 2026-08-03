@@ -23,4 +23,3 @@ def get_current_user(authorization: str | None = Header(default=None)) -> str:
         return account["$id"] if isinstance(account, dict) else account.id
     except Exception as exc:
         raise HTTPException(status_code=401, detail="Invalid or expired session") from exc
-

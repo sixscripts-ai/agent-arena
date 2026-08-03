@@ -78,7 +78,7 @@ function ProviderCard({ p, host }: { p: ProviderOut; host?: boolean }) {
 }
 
 export default function ProvidersPage() {
-  const { user, jwt, loading } = useAuth();
+  const { user, jwt, loading, refreshJwt } = useAuth();
   const router = useRouter();
   const [items, setItems] = useState<ProviderOut[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -100,9 +100,10 @@ export default function ProvidersPage() {
   }, [loading, user, router]);
 
   async function load() {
-    if (!jwt) return;
+    const token = (await refreshJwt()) || jwt;
+    if (!token) return;
     try {
-      setItems(await api.providers(jwt));
+      setItems(await api.providers(token));
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to load");
     }
@@ -123,12 +124,13 @@ export default function ProvidersPage() {
   }
 
   async function onTest() {
-    if (!jwt || !apiKey || !baseUrl) return;
+    const token = (await refreshJwt()) || jwt;
+    if (!token || !apiKey || !baseUrl) return;
     setTesting(true);
     setHealthMsg(null);
     setError(null);
     try {
-      await api.providerHealth(jwt, {
+      await api.providerHealth(token, {
         base_url: baseUrl,
         api_key: apiKey,
         auth_style: authStyle,
@@ -144,12 +146,13 @@ export default function ProvidersPage() {
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
-    if (!jwt) return;
+    const token = (await refreshJwt()) || jwt;
+    if (!token) return;
     setBusy(true);
     setError(null);
     setHealthMsg(null);
     try {
-      await api.createProvider(jwt, {
+      await api.createProvider(token, {
         name,
         base_url: baseUrl,
         api_key: apiKey,

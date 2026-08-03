@@ -18,11 +18,17 @@ export default function BattleLivePage() {
   const [logs, setLogs] = useState<LogLine[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
+  const [reconnecting, setReconnecting] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
+  const battleRef = useRef<BattleOut | null>(null);
 
   useEffect(() => {
     if (!loading && !user) router.replace("/login");
   }, [loading, user, router]);
+
+  useEffect(() => {
+    battleRef.current = battle;
+  }, [battle]);
 
   useEffect(() => {
     if (!jwt || !id) return;
@@ -32,13 +38,36 @@ export default function BattleLivePage() {
     (async () => {
       try {
         const b = await api.getBattle(jwt, id);
-        if (!cancelled) setBattle(b);
+        if (!cancelled) {
+          setBattle(b);
+          battleRef.current = b;
+        }
       } catch (e) {
         if (!cancelled) setError(e instanceof Error ? e.message : "Load failed");
       }
+    })();
 
-      const token = (await refreshJwt()) || jwt;
+    return () => {
+      cancelled = true;
+      ac.abort();
+    };
+  }, [jwt, id]);
+
+  useEffect(() => {
+    if (!jwt || !id || !user) return;
+    const terminalStatuses = ["completed", "failed", "cancelled"];
+    if (battleRef.current?.status && terminalStatuses.includes(battleRef.current.status)) return;
+
+    let cancelled = false;
+    const ac = new AbortController();
+
+    const connect = async (attempt = 0) => {
+      if (cancelled || ac.signal.aborted) return;
+      if (battleRef.current?.status && terminalStatuses.includes(battleRef.current.status)) return;
+
+      setReconnecting(attempt > 0);
       try {
+        const token = (await refreshJwt()) || jwt;
         await streamBattle(
           id,
           token,
@@ -56,23 +85,47 @@ export default function BattleLivePage() {
                   : null;
               if (st) {
                 setBattle((prev) => (prev ? { ...prev, status: st } : prev));
+                battleRef.current = battleRef.current
+                  ? { ...battleRef.current, status: st }
+                  : battleRef.current;
               }
             }
           },
           ac.signal,
         );
+
+        if (cancelled || ac.signal.aborted) return;
+        if (battleRef.current?.status && terminalStatuses.includes(battleRef.current.status)) return;
+
+        const delay = Math.min(1000 * 2 ** attempt, 8000);
+        await new Promise((resolve) => setTimeout(resolve, delay));
+        if (!cancelled && !ac.signal.aborted) {
+          await connect(attempt + 1);
+        }
       } catch (e) {
-        if (!cancelled && !(e instanceof DOMException && e.name === "AbortError")) {
+        if (cancelled || ac.signal.aborted) return;
+        if (attempt < 4) {
+          const delay = Math.min(1000 * 2 ** attempt, 8000);
+          setError("Connection dropped. Reconnecting…");
+          await new Promise((resolve) => setTimeout(resolve, delay));
+          if (!cancelled && !ac.signal.aborted) {
+            await connect(attempt + 1);
+          }
+        } else {
           setError(e instanceof Error ? e.message : "Stream failed");
+          setReconnecting(false);
         }
       }
-    })();
+    };
+
+    connect(0);
 
     return () => {
       cancelled = true;
       ac.abort();
+      setReconnecting(false);
     };
-  }, [jwt, id, refreshJwt]);
+  }, [jwt, id, refreshJwt, user, battle?.status]);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -147,6 +200,9 @@ export default function BattleLivePage() {
       </div>
 
       {error && <p className="text-sm text-red-400 break-all">{error}</p>}
+      {reconnecting && (
+        <p className="text-sm text-amber-400">Reconnecting to the live battle stream…</p>
+      )}
 
       <Card>
         <CardHeader className="pb-2">
