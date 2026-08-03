@@ -89,7 +89,24 @@ def _host_judge_spec() -> tuple[str, str, str, str]:
                     proxy_token,
                     DEFAULT_JUDGE_MODEL,
                 )
-    # Fallback to OpenRouter Free if Modal proxy not configured / incomplete and HOST_OPENROUTER_KEY present
+    # Fallback chain if Modal proxy not configured / incomplete:
+    # 1) Groq (fast, generous) -> 2) DeepSeek -> 3) OpenRouter Free
+    groq_key = s.get("HOST_GROQ_KEY") or ""
+    if groq_key:
+        return (
+            "https://api.groq.com/openai/v1",
+            "bearer",
+            groq_key,
+            "llama-3.3-70b-versatile",
+        )
+    deep_key = s.get("HOST_DEEPSEEK_KEY") or ""
+    if deep_key:
+        return (
+            "https://api.deepseek.com/v1",
+            "bearer",
+            deep_key,
+            "deepseek-v4-flash",
+        )
     or_key = s.get("HOST_OPENROUTER_KEY") or ""
     if or_key:
         # use a free model that supports json_object reasonably well
