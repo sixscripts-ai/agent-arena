@@ -61,3 +61,19 @@ The startup update script already installs `uv`, creates `backend/.venv`, instal
 - `pnpm lint` currently reports pre-existing errors (mostly `no-empty` / `no-explicit-any` in
   `src/pages/*`); the linter itself works. `pnpm build` (tsc typecheck + vite) is clean.
 - The `esbuild` "Ignored build scripts" warning from `pnpm install` is harmless — the build works.
+
+### Claude Design Skillstack (user-global Cursor plugins)
+- Source marketplace: `https://github.com/freshtechbro/claudedesignskills` (Claude Code name
+  `claude-design-skillstack`). It is **not** a Cursor marketplace (`.claude-plugin/marketplace.json`
+  only). Do not `agent plugin marketplace add` that URL and expect it to index.
+- On this VM the 22 **individual** plugins (not the 5 duplicate bundles) are copied into
+  `~/.cursor/plugins/local/<name>/` with `.cursor-plugin/plugin.json`, skills also mirrored to
+  `~/.cursor/skills/<name>/`, and `~/.cursor/settings.json` `enabled_plugins` points at those folders.
+  Marketplace clone: `~/.cursor/plugins/marketplaces/claude-design-skillstack`.
+- Cloud Agent VMs do **not** see `/Users/villain/.claude/plugins/...` from the Mac. Re-run
+  `python3 ~/.cursor/plugins/install-claude-design-skillstack.py` (or clone the GitHub repo) if a
+  new pod is missing those plugins. They persist only if the environment snapshot includes `$HOME`.
+- Desktop: Customize → paste `https://github.com/freshtechbro/claudedesignskills`, or run the
+  installer against the existing Claude clone at
+  `~/.claude/plugins/marketplaces/claude-design-skillstack`, then **Developer: Reload Window**.
+  Enable **Include third-party Plugins, Skills, and other configs**.
