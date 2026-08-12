@@ -26,6 +26,16 @@ app.include_router(leaderboard_router.router)
 app.include_router(internal_router.router)
 
 
+@app.on_event("startup")
+def _ensure_schema_on_startup() -> None:
+    try:
+        from .schema import ensure_schema
+
+        ensure_schema()
+    except Exception:
+        pass
+
+
 @app.get("/health")
 def health():
     return {"status": "ok", "project": settings()["APPWRITE_PROJECT_ID"]}

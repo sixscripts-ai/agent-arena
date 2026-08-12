@@ -1,6 +1,6 @@
 from appwrite.client import Client
 from appwrite.services.account import Account
-from fastapi import Header, HTTPException
+from fastapi import Depends, Header, HTTPException
 
 from .config import settings
 
@@ -23,3 +23,18 @@ def get_current_user(authorization: str | None = Header(default=None)) -> str:
         return account["$id"] if isinstance(account, dict) else account.id
     except Exception as exc:
         raise HTTPException(status_code=401, detail="Invalid or expired session") from exc
+
+
+def admin_user_ids() -> set[str]:
+    raw = settings().get("ARENA_ADMIN_USER_IDS") or ""
+    return {part.strip() for part in raw.split(",") if part.strip()}
+
+
+def is_admin_user(user_id: str) -> bool:
+    return user_id in admin_user_ids()
+
+
+def require_admin(user_id: str = Depends(get_current_user)) -> str:
+    if not is_admin_user(user_id):
+        raise HTTPException(status_code=403, detail="Admin only")
+    return user_id

@@ -4,9 +4,10 @@ from appwrite.query import Query
 from fastapi import APIRouter, Depends, HTTPException
 
 from . import crypto, db
-from .auth import get_current_user
+from .auth import get_current_user, is_admin_user, require_admin
 from .config import settings
-from .schemas import ProviderCreate, ProviderHealth, ProviderOut
+from .schema import ensure_schema
+from .schemas import HostCatalogPatch, ProviderCreate, ProviderHealth, ProviderOut
 
 router = APIRouter(prefix="/providers", tags=["providers"])
 
@@ -141,16 +142,53 @@ def _host_configured(p: dict) -> bool:
     return bool(_cred_material(p.get("cred", "")))
 
 
+def _load_host_overrides() -> dict[str, dict]:
+    """Map host_id -> override fields from Appwrite host_catalog (best-effort)."""
+    try:
+        databases = db.get_databases()
+        database_id = db.get_database_id()
+        res = databases.list_documents(
+            database_id, "host_catalog", queries=[Query.limit(100)]
+        )
+    except Exception:
+        return {}
+    out: dict[str, dict] = {}
+    for doc in res.documents:
+        data = doc.data if hasattr(doc, "data") else {}
+        out[doc.id] = {
+            "name": data.get("name"),
+            "base_url": data.get("base_url"),
+            "model_name": data.get("model_name"),
+            "enabled": data.get("enabled"),
+        }
+    return out
+
+
+def _apply_host_row(p: dict, override: dict | None = None) -> dict:
+    row = {k: p[k] for k in _PUBLIC_KEYS}
+    if p.get("cred") == "modal_judge":
+        row["base_url"] = _modal_kimi_base()
+        row["model_name"] = _modal_kimi_model()
+    if override:
+        if override.get("name"):
+            row["name"] = override["name"]
+        if override.get("base_url"):
+            row["base_url"] = override["base_url"]
+        if override.get("model_name"):
+            row["model_name"] = override["model_name"]
+    return row
+
+
 def configured_host_providers() -> list[dict]:
+    overrides = _load_host_overrides()
     out = []
     for p in HOST_PROVIDERS:
+        ov = overrides.get(p["id"])
+        if ov is not None and ov.get("enabled") is False:
+            continue
         if not _host_configured(p):
             continue
-        row = {k: p[k] for k in _PUBLIC_KEYS}
-        if p.get("cred") == "modal_judge":
-            row["base_url"] = _modal_kimi_base()
-            row["model_name"] = _modal_kimi_model()
-        out.append(row)
+        out.append(_apply_host_row(p, ov))
     return out
 
 
@@ -241,31 +279,92 @@ def list_providers(user_id: str = Depends(get_current_user)):
     return hosts + yours
 
 
+@router.get("/capabilities")
+def provider_capabilities(user_id: str = Depends(get_current_user)):
+    return {"is_admin": is_admin_user(user_id)}
+
+
+@router.get("/host-catalog")
+def list_host_catalog(_admin: str = Depends(require_admin)):
+    overrides = _load_host_overrides()
+    rows = []
+    for p in HOST_PROVIDERS:
+        ov = overrides.get(p["id"]) or {}
+        row = _apply_host_row(p, ov if ov else None)
+        rows.append(
+            {
+                **row,
+                "cred": p.get("cred"),
+                "enabled": False if ov.get("enabled") is False else True,
+                "configured": _host_configured(p),
+            }
+        )
+    return rows
+
+
+@router.patch("/host-catalog/{host_id}")
+def patch_host_catalog(
+    host_id: str,
+    body: HostCatalogPatch,
+    _admin: str = Depends(require_admin),
+):
+    if host_id not in HOST_BY_ID:
+        raise HTTPException(status_code=404, detail="Unknown host id")
+    try:
+        ensure_schema()
+    except Exception:
+        pass
+    databases = db.get_databases()
+    database_id = db.get_database_id()
+    payload = {k: v for k, v in body.model_dump().items() if v is not None}
+    if not payload:
+        raise HTTPException(status_code=400, detail="No fields to update")
+    try:
+        databases.get_document(database_id, "host_catalog", host_id)
+        databases.update_document(database_id, "host_catalog", host_id, payload)
+    except AppwriteException:
+        # create with defaults for missing optional fields
+        create_payload = {
+            "name": payload.get("name") or HOST_BY_ID[host_id]["name"],
+            "base_url": payload.get("base_url") or HOST_BY_ID[host_id]["base_url"],
+            "model_name": payload.get("model_name") or HOST_BY_ID[host_id]["model_name"],
+            "enabled": payload.get("enabled", True),
+        }
+        try:
+            databases.create_document(
+                database_id, "host_catalog", host_id, create_payload
+            )
+        except AppwriteException as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+    ov = _load_host_overrides().get(host_id) or {}
+    row = _apply_host_row(HOST_BY_ID[host_id], ov)
+    return {
+        **row,
+        "cred": HOST_BY_ID[host_id].get("cred"),
+        "enabled": False if ov.get("enabled") is False else True,
+        "configured": _host_configured(HOST_BY_ID[host_id]),
+    }
+
+
 def get_model_call_spec(model_id: str, user_id: str) -> tuple[str, str, str, str]:
     """Return (base_url, auth_style, api_key, model_name) for a battle model_id."""
     host = HOST_BY_ID.get(model_id)
     if host:
+        ov = _load_host_overrides().get(model_id)
+        if ov is not None and ov.get("enabled") is False:
+            raise HTTPException(status_code=404, detail=f"Host model disabled: {model_id}")
         key = _cred_material(host.get("cred", ""))
         if not key:
             raise HTTPException(
                 status_code=500,
                 detail=f"Host credentials not configured for {model_id}",
             )
-        base = (
-            _modal_kimi_base()
-            if host.get("cred") == "modal_judge"
-            else host["base_url"]
-        )
-        model_name = (
-            _modal_kimi_model()
-            if host.get("cred") == "modal_judge"
-            else host["model_name"]
-        )
+        row = _apply_host_row(host, ov)
         return (
-            base,
+            row["base_url"],
             host["auth_style"],
             key,
-            model_name,
+            row["model_name"],
         )
     databases = db.get_databases()
     database_id = db.get_database_id()

@@ -30,6 +30,13 @@ class ProviderHealth(BaseModel):
     model_name: str | None = None
 
 
+class HostCatalogPatch(BaseModel):
+    name: str | None = Field(default=None, min_length=1, max_length=100)
+    base_url: str | None = Field(default=None, min_length=1, max_length=500)
+    model_name: str | None = Field(default=None, min_length=1, max_length=200)
+    enabled: bool | None = None
+
+
 class BattleCreate(BaseModel):
     format_id: str = Field(min_length=1)
     model_ids: list[str] = Field(min_length=2, max_length=6)

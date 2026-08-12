@@ -114,10 +114,10 @@ export default function NewBattle() {
               <div key={i} className="space-y-1.5">
                 <label className="text-[12px] font-medium">Slot {i+1}: {roles[i] || `model ${i+1}`}</label>
                 <select className="select" value={mid} onChange={e=>{ const n=[...selected]; n[i]=e.target.value; setSelected(n); }}>
-                  <optgroup label="Host — free">
+                  <optgroup label="Host (shared) — always available">
                     {host.map(p=><option key={p.id} value={p.id}>{p.name} • {p.model_name}</option>)}
                   </optgroup>
-                  <optgroup label="Your">
+                  <optgroup label="Your providers">
                     {yours.map(p=><option key={p.id} value={p.id}>{p.name} • {p.model_name}</option>)}
                   </optgroup>
                 </select>

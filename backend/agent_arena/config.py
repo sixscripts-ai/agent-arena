@@ -48,4 +48,6 @@ def settings() -> dict:
             "BACKEND_PUBLIC_URL",
             "https://sixscripts--agent-arena-backend-fastapi-app.modal.run",
         ),
+        # Comma-separated Appwrite user ids allowed to edit host catalog in UI
+        "ARENA_ADMIN_USER_IDS": os.environ.get("ARENA_ADMIN_USER_IDS", ""),
     }

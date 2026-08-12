@@ -54,6 +54,13 @@ COLLECTIONS = {
         ("elo", "float", True),
         ("games_played", "integer", True),
     ],
+    # Operator overrides for static HOST_PROVIDERS (doc id = host:…)
+    "host_catalog": [
+        ("name", "string", False),
+        ("base_url", "string", False),
+        ("model_name", "string", False),
+        ("enabled", "boolean", False),
+    ],
 }
 
 ARRAY_ATTRIBUTES = {"battles": {"model_ids": 256}}

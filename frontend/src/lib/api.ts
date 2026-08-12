@@ -28,6 +28,19 @@ export const api = {
   health: () => request<{ status: string }>("/health"),
   formats: (token?: string | null) => request<FormatOut[]>("/formats", { token }),
   providers: (token: string) => request<ProviderOut[]>("/providers", { token }),
+  providerCapabilities: (token: string) =>
+    request<{ is_admin: boolean }>("/providers/capabilities", { token }),
+  hostCatalog: (token: string) => request<HostCatalogRow[]>("/providers/host-catalog", { token }),
+  patchHostCatalog: (
+    token: string,
+    hostId: string,
+    body: { name?: string; base_url?: string; model_name?: string; enabled?: boolean }
+  ) =>
+    request<HostCatalogRow>(`/providers/host-catalog/${encodeURIComponent(hostId)}`, {
+      method: "PATCH",
+      body,
+      token,
+    }),
   createProvider: (token: string, body: ProviderCreate) => request<ProviderOut>("/providers", { method: "POST", body, token }),
   providerHealth: (token: string, body: { base_url: string; api_key: string; auth_style: string; model?: string }) =>
     request<{ ok: boolean; status_code: number }>("/providers/health", { method: "POST", body, token }),
@@ -67,6 +80,12 @@ export type ProviderOut = {
   masked_key: string;
   auth_style: string;
   model_name: string;
+};
+
+export type HostCatalogRow = ProviderOut & {
+  cred?: string;
+  enabled: boolean;
+  configured: boolean;
 };
 
 export type ProviderCreate = {
