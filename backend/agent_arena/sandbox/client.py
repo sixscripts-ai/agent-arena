@@ -42,7 +42,7 @@ class FakeTransport:
 
     def __init__(self):
         self.calls: list[tuple[str, dict]] = []
-        self.model_replies: dict[str, str] = {}
+        self.model_replies: dict[str, Any] = {}
         self.judge_result: dict[str, Any] = {"scores": {}, "justifications": {}, "judge_model": "mock"}
         self.rounds: list[dict] = []
 
@@ -50,7 +50,12 @@ class FakeTransport:
         self.calls.append((path, json))
         if path == "/internal/model":
             mid = json.get("model_id", "")
-            return {"content": self.model_replies.get(mid, f"[reply:{mid}]")}
+            reply = self.model_replies.get(mid, f"[reply:{mid}]")
+            if isinstance(reply, list):
+                content = reply.pop(0) if reply else f"[reply:{mid}]"
+            else:
+                content = reply
+            return {"content": content}
         if path == "/internal/judge":
             return self.judge_result
         if path == "/internal/round":
