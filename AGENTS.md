@@ -1,0 +1,53 @@
+# Agent Arena
+
+Web platform where AI models compete in security/coding "arena" battles. Two services:
+
+- `backend/` — Python 3.12 FastAPI app (deployed on Modal, data in Appwrite Cloud). Package `agent_arena`.
+- `frontend/` — Vite + React + TypeScript SPA (deployed on Vercel; Appwrite SDK for auth).
+
+## Cursor Cloud specific instructions
+
+The startup update script already installs `uv`, creates `backend/.venv`, installs backend deps
+(`-e "./backend[dev]"`), runs `pnpm -C frontend install`, and bootstraps a non-secret `.env` from
+`.env.example` if missing. The notes below are the non-obvious gotchas; standard commands live in
+`backend/pyproject.toml`, `backend/pytest.ini`, and `frontend/package.json`.
+
+### Environment / config
+- No system `python3-venv`/`ensurepip` and no `apt`/`sudo`. Use the `uv`-managed venv at
+  `backend/.venv` (do not `python -m venv`). Run backend tools via `backend/.venv/bin/python`.
+- Backend config lives in repo-root `.env` (loaded by `agent_arena/config.py` and
+  `tests/conftest.py`). `.env` is gitignored, so it is NOT committed — the update script recreates a
+  scaffold from `.env.example`. `settings()` raises `RuntimeError` at call time (not import) unless
+  all four of `APPWRITE_ENDPOINT`, `APPWRITE_PROJECT_ID`, `APPWRITE_API_KEY`, `APPWRITE_DATABASE_ID`
+  are non-empty. The scaffold leaves `APPWRITE_API_KEY` empty; set a real one to run against Appwrite.
+
+### External services
+- The default deployed Modal backend (`aschenbrenerashton--agent-arena-backend-fastapi-app.modal.run`,
+  also the frontend's default `VITE_MODAL_URL`) is currently DISABLED (HTTP 404 "workspace is
+  disabled"). For local dev run the backend yourself and point the frontend at it with
+  `VITE_MODAL_URL=http://localhost:8000`.
+- The Appwrite Cloud project (`6a6f9133001ed182210d`, `sfo.cloud.appwrite.io`) is live and permits
+  email signup. Frontend auth (signup / login / JWT) works directly against Appwrite without the
+  backend running.
+
+### Backend: test / run
+- Tests: `backend/.venv/bin/python -m pytest --ignore=tests/evals`. Always pass `--ignore=tests/evals`:
+  `tests/evals/` is a DeepEval suite that imports an OpenRouter model at collection time and errors
+  without `OPENROUTER_API_KEY`. `pytest.ini` already deselects `-m modal` (real Modal sandbox tests).
+- Appwrite-backed tests auto-skip when `APPWRITE_API_KEY` is empty (see `conftest.HAVE_APPWRITE`).
+- Known failures with an empty `APPWRITE_API_KEY` (they call `settings()` but are not guarded by the
+  skip): `test_health`, `test_internal_requires_key`, `test_get_model_call_spec_host_free`, and
+  `test_auth::test_returns_appwrite_user_*`. All pass once `APPWRITE_API_KEY` is set to any non-empty
+  value. `test_redact::test_four_spec_patterns_present` is a PRE-EXISTING failure unrelated to setup
+  (asserts 4 patterns; `redact.REDACT_PATTERNS` has 11) — do not "fix" it as part of env setup.
+- Run: `APPWRITE_API_KEY=<value> backend/.venv/bin/python -m uvicorn agent_arena.main:app --port 8000`.
+  `/health` needs `settings()` to load. A full battle end-to-end additionally needs Appwrite seeded
+  with the 25 formats plus host model keys (`HOST_OPENROUTER_KEY`, etc.) and `JUDGE_MODAL_KEY`/
+  `JUDGE_MODAL_SECRET`. `ARENA_USE_MOCK=1` (default in `.env`) uses the in-process mock runner so no
+  model keys are needed, but Appwrite is still required to persist battles.
+
+### Frontend: lint / build / run
+- Standard scripts in `frontend/package.json` (`pnpm dev`, `pnpm build`, `pnpm lint`, `pnpm check`).
+- `pnpm lint` currently reports pre-existing errors (mostly `no-empty` / `no-explicit-any` in
+  `src/pages/*`); the linter itself works. `pnpm build` (tsc typecheck + vite) is clean.
+- The `esbuild` "Ignored build scripts" warning from `pnpm install` is harmless — the build works.
