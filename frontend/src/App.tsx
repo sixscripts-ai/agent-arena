@@ -21,7 +21,7 @@ export default function App() {
   return (
     <Router>
       <SiteHeader />
-      <main className="mx-auto max-w-[1360px] px-6 py-8">
+      <main className="relative mx-auto max-w-[1440px] px-5 py-7 md:px-8 md:py-10">
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/login" element={<Login />} />
@@ -33,7 +33,7 @@ export default function App() {
           <Route path="/history" element={<History />} />
           <Route path="/design" element={<DesignOptions />} />
           <Route path="/design/battle" element={<DesignMockup />} />
-          <Route path="*" element={<div className="p-8 text-center">404 — Not found</div>} />
+          <Route path="*" element={<div className="card p-10 text-center text-[13px] text-muted">404 — Not found</div>} />
         </Routes>
       </main>
     </Router>
