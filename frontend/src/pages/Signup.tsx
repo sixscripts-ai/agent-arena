@@ -1,10 +1,13 @@
 import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "@/lib/auth";
+import { authRoute, sanitizeInternalReturn } from "@/lib/authReturn";
 
 export default function Signup() {
   const { signup } = useAuth();
   const nav = useNavigate();
+  const [params] = useSearchParams();
+  const next = sanitizeInternalReturn(params.get("next"));
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -14,7 +17,7 @@ export default function Signup() {
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     setBusy(true); setErr(null);
-    try { await signup(email, password, name || email.split("@")[0]); nav("/"); } catch (e) { setErr(e instanceof Error ? e.message : "Signup failed"); } finally { setBusy(false); }
+    try { await signup(email, password, name || email.split("@")[0]); nav(next); } catch (e) { setErr(e instanceof Error ? e.message : "Signup failed"); } finally { setBusy(false); }
   }
 
   return (
@@ -41,7 +44,7 @@ export default function Signup() {
           <button disabled={busy} className="btn btn-primary h-11 w-full text-[13px]">{busy ? "Creating account…" : "Sign up →"}</button>
         </form>
         <p className="mt-6 text-center text-[13px] text-muted">
-          Have an account? <Link to="/login" className="link">Log in</Link>
+          Have an account? <Link to={authRoute("login", next)} className="link">Log in</Link>
         </p>
       </div>
     </div>

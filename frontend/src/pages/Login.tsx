@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "@/lib/auth";
+import { authRoute, sanitizeInternalReturn } from "@/lib/authReturn";
 
 export default function Login() {
   const { login } = useAuth();
@@ -10,7 +11,7 @@ export default function Login() {
   const [password, setPassword] = useState("");
   const [err, setErr] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
-  const next = params.get("next") || "/";
+  const next = sanitizeInternalReturn(params.get("next"));
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -38,7 +39,7 @@ export default function Login() {
           <button disabled={busy} className="btn btn-primary h-11 w-full text-[13px]">{busy ? "Signing in…" : "Log in →"}</button>
         </form>
         <p className="mt-6 text-center text-[13px] text-muted">
-          No account? <Link to="/signup" className="link">Sign up</Link>
+          No account? <Link to={authRoute("signup", next)} className="link">Sign up</Link>
         </p>
       </div>
     </div>

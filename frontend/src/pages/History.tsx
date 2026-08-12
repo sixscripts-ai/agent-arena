@@ -1,15 +1,17 @@
 import { useEffect, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { api, type BattleOut } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
+import { authRoute, currentInternalReturn } from "@/lib/authReturn";
 
 export default function History() {
   const { user, jwt, refreshJwt } = useAuth();
   const nav = useNavigate();
+  const loc = useLocation();
   const [battles, setBattles] = useState<BattleOut[]>([]);
   const [err, setErr] = useState<string | null>(null);
 
-  useEffect(()=>{ if (!user) nav("/login"); }, [user, nav]);
+  useEffect(()=>{ if (!user) nav(authRoute("login", currentInternalReturn(loc)), { replace: true }); }, [user, nav, loc]);
 
   useEffect(()=>{
     if (!jwt) return;

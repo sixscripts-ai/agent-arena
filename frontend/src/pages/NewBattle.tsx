@@ -1,11 +1,13 @@
 import { useEffect, useMemo, useState } from "react";
-import { Link, useNavigate, useSearchParams } from "react-router-dom";
+import { Link, useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import { api, isHostProviderId, playableRoleCount, type FormatOut, type ProviderOut } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
+import { authRoute, currentInternalReturn } from "@/lib/authReturn";
 
 export default function NewBattle() {
   const { user, jwt, refreshJwt } = useAuth();
   const nav = useNavigate();
+  const loc = useLocation();
   const [params] = useSearchParams();
   const [formats, setFormats] = useState<FormatOut[]>([]);
   const [providers, setProviders] = useState<ProviderOut[]>([]);
@@ -83,7 +85,7 @@ export default function NewBattle() {
     } catch (er) { setErr(er instanceof Error ? er.message : "Create failed"); } finally { setBusy(false); }
   }
 
-  if (!user) return <div className="p-8 text-[13px] text-muted">Login required — <Link to="/login" className="link">log in</Link></div>;
+  if (!user) return <div className="p-8 text-[13px] text-muted">Login required — <Link to={authRoute("login", currentInternalReturn(loc))} className="link">log in</Link></div>;
 
   const Step = ({ n, title }: { n: number; title: string }) => (
     <div className="flex items-center gap-2 text-[13px] font-semibold tracking-[-0.01em]">

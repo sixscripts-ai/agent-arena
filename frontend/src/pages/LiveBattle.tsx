@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Link, useParams } from "react-router-dom";
+import { Link, useLocation, useParams } from "react-router-dom";
 import {
   Activity,
   Check,
@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { api, streamBattle, type BattleOut, type StreamEvent } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
+import { authRoute, currentInternalReturn } from "@/lib/authReturn";
 import CodePane, { type PaneArtifact } from "@/components/CodePane";
 
 type CodeArtifact = PaneArtifact & { model_id: string };
@@ -49,6 +50,7 @@ function eventLabel(kind?: string): string {
 
 export default function LiveBattle() {
   const { id } = useParams<{ id: string }>();
+  const loc = useLocation();
   const { user, jwt, refreshJwt } = useAuth();
   const [battle, setBattle] = useState<BattleOut | null>(null);
   const [arts, setArts] = useState<CodeArtifact[]>([]);
@@ -273,7 +275,7 @@ export default function LiveBattle() {
         <div className="mx-auto max-w-[36ch] space-y-3">
           <div className="text-[13px] font-semibold">Authentication required</div>
           <p className="text-[13px] leading-6 text-muted">This battle stream is private. Log in to continue your session.</p>
-          <Link to="/login" className="btn btn-primary mx-auto mt-2 h-9 px-4 text-[12px]">Log in →</Link>
+          <Link to={authRoute("login", currentInternalReturn(loc))} className="btn btn-primary mx-auto mt-2 h-9 px-4 text-[12px]">Log in →</Link>
         </div>
       </div>
     );

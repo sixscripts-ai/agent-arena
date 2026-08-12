@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import { api, isHostProviderId, type ProviderOut } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
+import { authRoute, currentInternalReturn } from "@/lib/authReturn";
 
 const PRESETS: Record<string, { name: string; base_url: string; auth_style: string; model_name: string }> = {
   openai: { name: "My OpenAI", base_url: "https://api.openai.com/v1", auth_style: "bearer", model_name: "gpt-4o-mini" },
@@ -16,6 +17,7 @@ const PRESETS: Record<string, { name: string; base_url: string; auth_style: stri
 
 export default function Providers() {
   const { user, jwt, refreshJwt } = useAuth();
+  const loc = useLocation();
   const [items, setItems] = useState<ProviderOut[]>([]);
   const [err, setErr] = useState<string | null>(null);
   const [msg, setMsg] = useState<string | null>(null);
@@ -63,7 +65,7 @@ export default function Providers() {
     } catch (e) { setErr(e instanceof Error ? e.message : "Save failed"); } finally { setBusy(false); }
   }
 
-  if (!user) return <div className="p-8 text-[13px] text-muted">Login required — <Link to="/login" className="link">log in</Link></div>;
+  if (!user) return <div className="p-8 text-[13px] text-muted">Login required — <Link to={authRoute("login", currentInternalReturn(loc))} className="link">log in</Link></div>;
 
   return (
     <div className="grid grid-cols-12 gap-6">

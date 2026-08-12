@@ -1,5 +1,6 @@
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/lib/auth";
+import { authRoute, currentInternalReturn } from "@/lib/authReturn";
 import { useEffect, useState } from "react";
 
 const LINKS = [
@@ -15,6 +16,8 @@ export default function SiteHeader() {
   const [open, setOpen] = useState(false);
   const nav = useNavigate();
   const loc = useLocation();
+  const next = currentInternalReturn(loc);
+  const authNext = loc.pathname === "/login" || loc.pathname === "/signup" ? "/" : next;
 
   useEffect(() => { init(); }, [init]);
 
@@ -50,8 +53,8 @@ export default function SiteHeader() {
             </>
           ) : (
             <>
-              <Link to="/login" className="navlink">Log in</Link>
-              <Link to="/signup" className="btn btn-primary h-8 px-4 text-[12px]">Sign up</Link>
+              <Link to={authRoute("login", authNext)} className="navlink">Log in</Link>
+              <Link to={authRoute("signup", authNext)} className="btn btn-primary h-8 px-4 text-[12px]">Sign up</Link>
             </>
           )}
           <button onClick={() => setOpen(!open)} aria-label="Menu" className="grid h-8 w-8 place-items-center rounded-md border border-border text-[14px] md:hidden">☰</button>

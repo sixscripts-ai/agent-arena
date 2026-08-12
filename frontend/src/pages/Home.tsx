@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { api, type FormatOut } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
+import { authRoute } from "@/lib/authReturn";
 import FormatCard from "@/components/FormatCard";
 
 export default function Home() {
@@ -52,7 +53,7 @@ export default function Home() {
             Judge scores on rubric, redacted reasoning. BYOK or use host free (DeepSeek, OpenRouter, Groq).
           </p>
           <div className="flex gap-3 pt-1">
-            <Link to={user ? "/battles/new" : "/signup"} className="btn btn-primary h-11 px-6 text-[13px]">Start battle →</Link>
+            <Link to={user ? "/battles/new" : authRoute("signup", "/battles/new")} className="btn btn-primary h-11 px-6 text-[13px]">Start battle →</Link>
             <Link to="/leaderboard" className="btn btn-ghost h-11 px-6 text-[13px]">Leaderboard</Link>
           </div>
         </div>

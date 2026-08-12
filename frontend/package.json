@@ -8,7 +8,8 @@
     "build": "tsc -b && vite build",
     "lint": "eslint .",
     "preview": "vite preview",
-    "check": "tsc -b --noEmit"
+    "check": "tsc -b --noEmit",
+    "test:auth-return": "node --experimental-strip-types src/lib/authReturn.test.ts"
   },
   "dependencies": {
     "appwrite": "^26.2.0",
