@@ -97,8 +97,7 @@ def _host_judge_spec() -> tuple[str, str, str, str]:
                     proxy_token,
                     model,
                 )
-    # Fallback chain if Modal proxy not configured / incomplete:
-    # 1) TokenRouter Kimi-K3-Free (user says only this works) -> 2) Groq -> 3) DeepSeek -> 4) OpenRouter Free
+    # Fallback if Modal proxy incomplete: TokenRouter, then Manus 1.6-lite
     tr_key = s.get("HOST_TOKENROUTER_KEY") or ""
     if tr_key:
         return (
@@ -107,37 +106,20 @@ def _host_judge_spec() -> tuple[str, str, str, str]:
             tr_key,
             "moonshotai/kimi-k3-free",
         )
-    groq_key = s.get("HOST_GROQ_KEY") or ""
-    if groq_key:
+    manus_key = s.get("HOST_MANUS_KEY") or ""
+    if manus_key:
         return (
-            "https://api.groq.com/openai/v1",
-            "bearer",
-            groq_key,
-            "llama-3.3-70b-versatile",
-        )
-    deep_key = s.get("HOST_DEEPSEEK_KEY") or ""
-    if deep_key:
-        return (
-            "https://api.deepseek.com/v1",
-            "bearer",
-            deep_key,
-            "deepseek-v4-flash",
-        )
-    or_key = s.get("HOST_OPENROUTER_KEY") or ""
-    if or_key:
-        # use a free model that supports json_object reasonably well
-        return (
-            "https://openrouter.ai/api/v1",
-            "bearer",
-            or_key,
-            "nvidia/nemotron-3-nano-30b-a3b:free",
+            "https://api.manus.ai",
+            "manus",
+            manus_key,
+            "manus-1.6-lite",
         )
     key = s.get("JUDGE_MODAL_KEY") or ""
     secret = s.get("JUDGE_MODAL_SECRET") or ""
     if not key or not secret:
         raise HTTPException(
             status_code=500,
-            detail="Judge credentials not configured (no proxy token and no HOST_OPENROUTER_KEY fallback)",
+            detail="Judge credentials not configured (no proxy token / HOST_MANUS_KEY fallback)",
         )
     combined = f"{key}:{secret}"
     return base, "modal_proxy", combined, model

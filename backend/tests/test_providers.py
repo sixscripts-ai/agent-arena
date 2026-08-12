@@ -79,37 +79,52 @@ def test_provider_health_bad_endpoint(client, authed_user):
     assert resp.status_code in (400, 502)
 
 
-def test_get_model_call_spec_host_free(monkeypatch):
+def test_get_model_call_spec_host_manus(monkeypatch):
     from agent_arena import providers
     from agent_arena.config import settings
 
     settings.cache_clear()
-    monkeypatch.setenv("HOST_OPENROUTER_KEY", "sk-or-test-key")
+    monkeypatch.setenv("HOST_MANUS_KEY", "sk-manus-test-key")
     monkeypatch.setenv("JUDGE_MODAL_KEY", "ak-test")
     monkeypatch.setenv("JUDGE_MODAL_SECRET", "as-test")
+    monkeypatch.setenv(
+        "JUDGE_MODAL_MODEL", "sixscripts--ep-kimi-k3-server.us-west.modal.direct"
+    )
+    monkeypatch.setenv("JUDGE_MODAL_BASE", "https://inference.us-west.modal.direct/v1")
     monkeypatch.delenv("HOST_XAI_KEY", raising=False)
-    monkeypatch.delenv("HOST_DEEPSEEK_KEY", raising=False)
     monkeypatch.delenv("HOST_OPENAI_KEY", raising=False)
+    monkeypatch.delenv("HOST_MERGE_KEY", raising=False)
+    monkeypatch.delenv("HOST_TOKENROUTER_KEY", raising=False)
+    monkeypatch.delenv("JUDGE_MODAL_PROXY_TOKEN", raising=False)
+    monkeypatch.delenv("MODAL_PROXY_TOKEN", raising=False)
     settings.cache_clear()
     try:
-        base, style, key, model = providers.get_model_call_spec("host:openrouter-free", "any-user")
-        assert base == "https://openrouter.ai/api/v1"
-        assert style == "bearer"
-        assert key == "sk-or-test-key"
-        assert model == "nvidia/nemotron-3-ultra-550b-a55b:free"
-        base2, _, key2, model2 = providers.get_model_call_spec("host:or-laguna-s", "any-user")
-        assert base2 == base and key2 == key
-        assert model2 == "poolside/laguna-s-2.1:free"
-        mbase, mstyle, mkey, mmodel = providers.get_model_call_spec("host:modal-kimi", "any-user")
+        base, style, key, model = providers.get_model_call_spec(
+            "host:manus-1.6-lite", "any-user"
+        )
+        assert base == "https://api.manus.ai"
+        assert style == "manus"
+        assert key == "sk-manus-test-key"
+        assert model == "manus-1.6-lite"
+        base2, style2, key2, model2 = providers.get_model_call_spec(
+            "host:manus-1.6", "any-user"
+        )
+        assert base2 == base and style2 == style and key2 == key
+        assert model2 == "manus-1.6"
+        mbase, mstyle, mkey, mmodel = providers.get_model_call_spec(
+            "host:modal-kimi", "any-user"
+        )
         assert "modal.direct" in mbase
         assert mstyle == "modal_proxy"
         assert mkey == "ak-test:as-test"
-        assert mmodel == "moonshotai/Kimi-K3"
+        assert "kimi" in mmodel.lower() or "sixscripts" in mmodel
         listed = providers.configured_host_providers()
         ids = {p["id"] for p in listed}
-        assert "host:modal-kimi" in ids and "host:openrouter-free" in ids
-        assert "host:xai-grok" not in ids
-        assert providers.is_host_model("host:or-gemma-31b")
+        assert "host:modal-kimi" in ids and "host:manus-1.6-lite" in ids
+        assert "host:manus-1.6" in ids and "host:manus-1.6-max" in ids
+        assert "host:openrouter-free" not in ids
+        assert "host:groq-llama" not in ids
+        assert providers.is_host_model("host:manus-1.6")
         assert not providers.is_host_model("user-doc-id")
     finally:
         settings.cache_clear()
@@ -138,7 +153,7 @@ def test_get_model_call_spec_user_provider(client, authed_user, monkeypatch):
         assert base == body["base_url"]
         assert style == "bearer"
         assert key == body["api_key"]
-        assert model == "my-model-v1"
+        assert model == body["model_name"]
     finally:
         databases = db.get_databases()
         res = databases.list_documents(

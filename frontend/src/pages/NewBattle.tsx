@@ -30,7 +30,7 @@ export default function NewBattle() {
       setProviders(p);
       if (!formatId && f[0]) setFormatId(f[0].id);
       const hostIds = p.filter(x=>isHostProviderId(x.id)).map(x=>x.id);
-      const fb = hostIds[0] || p[0]?.id || "host:openrouter-free";
+      const fb = hostIds[0] || p[0]?.id || "host:manus-1.6-lite";
       const alt = hostIds[1] || hostIds[0] || fb;
       if (selected.length===0) setSelected([fb, alt]);
     })();
@@ -48,7 +48,7 @@ export default function NewBattle() {
   useEffect(()=>{
     setSelected(prev=>{
       const next = prev.slice(0, need);
-      const fb = host[0]?.id || providers[0]?.id || "host:openrouter-free";
+      const fb = host[0]?.id || providers[0]?.id || "host:manus-1.6-lite";
       const alt = host[1]?.id || host[0]?.id || fb;
       while (next.length < need) next.push(next.length===1 ? alt : fb);
       const allowed = new Set(providers.map(p=>p.id));

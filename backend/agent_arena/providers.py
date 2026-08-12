@@ -10,9 +10,9 @@ from .schemas import ProviderCreate, ProviderHealth, ProviderOut
 
 router = APIRouter(prefix="/providers", tags=["providers"])
 
-OPENROUTER_BASE = "https://openrouter.ai/api/v1"
 DEFAULT_MODAL_KIMI_BASE = "https://inference.us-west.modal.direct/v1"
-HOST_FREE_ID = "host:openrouter-free"
+MANUS_BASE = "https://api.manus.ai"
+HOST_DEFAULT_ID = "host:manus-1.6-lite"
 
 
 def _modal_kimi_base() -> str:
@@ -29,7 +29,6 @@ def _modal_kimi_model() -> str:
 # Multi-backend host catalog. Each entry declares how to resolve credentials.
 # Public list only includes entries whose credentials are present.
 HOST_PROVIDERS: list[dict] = [
-    # --- Modal (Kimi) ---
     {
         "id": "host:modal-kimi",
         "name": "Modal (Kimi-K3)",
@@ -39,80 +38,33 @@ HOST_PROVIDERS: list[dict] = [
         "model_name": "sixscripts--ep-kimi-k3-server.us-west.modal.direct",
         "cred": "modal_judge",
     },
-    # --- OpenRouter free tier (HOST_OPENROUTER_KEY) ---
     {
-        "id": HOST_FREE_ID,
-        "name": "OpenRouter Free (Nemotron Ultra)",
-        "base_url": OPENROUTER_BASE,
-        "masked_key": "sk-or-...free",
-        "auth_style": "bearer",
-        "model_name": "nvidia/nemotron-3-ultra-550b-a55b:free",
-        "cred": "openrouter",
+        "id": "host:manus-1.6",
+        "name": "Manus 1.6",
+        "base_url": MANUS_BASE,
+        "masked_key": "manus-…",
+        "auth_style": "manus",
+        "model_name": "manus-1.6",
+        "cred": "manus",
     },
     {
-        "id": "host:or-nemotron-super",
-        "name": "OpenRouter Free (Nemotron Super)",
-        "base_url": OPENROUTER_BASE,
-        "masked_key": "sk-or-...free",
-        "auth_style": "bearer",
-        "model_name": "nvidia/nemotron-3-super-120b-a12b:free",
-        "cred": "openrouter",
+        "id": HOST_DEFAULT_ID,
+        "name": "Manus 1.6 Lite",
+        "base_url": MANUS_BASE,
+        "masked_key": "manus-…",
+        "auth_style": "manus",
+        "model_name": "manus-1.6-lite",
+        "cred": "manus",
     },
     {
-        "id": "host:or-nemotron-nano",
-        "name": "OpenRouter Free (Nemotron Nano)",
-        "base_url": OPENROUTER_BASE,
-        "masked_key": "sk-or-...free",
-        "auth_style": "bearer",
-        "model_name": "nvidia/nemotron-3-nano-30b-a3b:free",
-        "cred": "openrouter",
+        "id": "host:manus-1.6-max",
+        "name": "Manus 1.6 Max",
+        "base_url": MANUS_BASE,
+        "masked_key": "manus-…",
+        "auth_style": "manus",
+        "model_name": "manus-1.6-max",
+        "cred": "manus",
     },
-    {
-        "id": "host:or-laguna-s",
-        "name": "OpenRouter Free (Laguna S)",
-        "base_url": OPENROUTER_BASE,
-        "masked_key": "sk-or-...free",
-        "auth_style": "bearer",
-        "model_name": "poolside/laguna-s-2.1:free",
-        "cred": "openrouter",
-    },
-    {
-        "id": "host:or-gemma-31b",
-        "name": "OpenRouter Free (Gemma 4 31B)",
-        "base_url": OPENROUTER_BASE,
-        "masked_key": "sk-or-...free",
-        "auth_style": "bearer",
-        "model_name": "google/gemma-4-31b-it:free",
-        "cred": "openrouter",
-    },
-    {
-        "id": "host:or-gpt-oss-20b",
-        "name": "OpenRouter Free (GPT-OSS 20B)",
-        "base_url": OPENROUTER_BASE,
-        "masked_key": "sk-or-...free",
-        "auth_style": "bearer",
-        "model_name": "openai/gpt-oss-20b:free",
-        "cred": "openrouter",
-    },
-    {
-        "id": "host:or-ling-flash",
-        "name": "OpenRouter Free (Ling 3 Flash)",
-        "base_url": OPENROUTER_BASE,
-        "masked_key": "sk-or-...free",
-        "auth_style": "bearer",
-        "model_name": "inclusionai/ling-3.0-flash:free",
-        "cred": "openrouter",
-    },
-    {
-        "id": "host:or-router-free",
-        "name": "OpenRouter Free (Auto)",
-        "base_url": OPENROUTER_BASE,
-        "masked_key": "sk-or-...free",
-        "auth_style": "bearer",
-        "model_name": "openrouter/free",
-        "cred": "openrouter",
-    },
-    # --- Optional host backends (appear when env key is set) ---
     {
         "id": "host:merge-gateway",
         "name": "Merge Gateway",
@@ -132,15 +84,6 @@ HOST_PROVIDERS: list[dict] = [
         "cred": "tokenrouter",
     },
     {
-        "id": "host:groq-llama",
-        "name": "Groq (Llama 3.3 70B)",
-        "base_url": "https://api.groq.com/openai/v1",
-        "masked_key": "gsk_…",
-        "auth_style": "bearer",
-        "model_name": "llama-3.3-70b-versatile",
-        "cred": "groq",
-    },
-    {
         "id": "host:xai-grok",
         "name": "xAI (Grok)",
         "base_url": "https://api.x.ai/v1",
@@ -148,15 +91,6 @@ HOST_PROVIDERS: list[dict] = [
         "auth_style": "bearer",
         "model_name": "grok-4-1-fast-non-reasoning",
         "cred": "xai",
-    },
-    {
-        "id": "host:deepseek-chat",
-        "name": "DeepSeek (Chat)",
-        "base_url": "https://api.deepseek.com/v1",
-        "masked_key": "sk-…",
-        "auth_style": "bearer",
-        "model_name": "deepseek-v4-flash",
-        "cred": "deepseek",
     },
     {
         "id": "host:openai-gpt4o-mini",
@@ -167,18 +101,9 @@ HOST_PROVIDERS: list[dict] = [
         "model_name": "gpt-4o-mini",
         "cred": "openai",
     },
-    {
-        "id": "host:meta-muse",
-        "name": "Meta (Muse Spark)",
-        "base_url": "https://api.meta.ai/v1",
-        "masked_key": "sk-…",
-        "auth_style": "bearer",
-        "model_name": "muse-spark-1.1",
-        "cred": "meta",
-    },
 ]
 
-HOST_FREE = next(p for p in HOST_PROVIDERS if p["id"] == HOST_FREE_ID)
+HOST_FREE = next(p for p in HOST_PROVIDERS if p["id"] == HOST_DEFAULT_ID)
 HOST_BY_ID = {p["id"]: p for p in HOST_PROVIDERS}
 _PUBLIC_KEYS = ("id", "name", "base_url", "masked_key", "auth_style", "model_name")
 
@@ -190,8 +115,8 @@ def is_host_model(model_id: str) -> bool:
 def _cred_material(cred: str) -> str | None:
     """Return api_key material for a host cred type, or None if unavailable."""
     s = settings()
-    if cred == "openrouter":
-        return s.get("HOST_OPENROUTER_KEY") or None
+    if cred == "manus":
+        return s.get("HOST_MANUS_KEY") or None
     if cred == "modal_judge":
         proxy = s.get("JUDGE_MODAL_PROXY_TOKEN") or ""
         if proxy and (("." in proxy and "wk-" in proxy) or ":" in proxy):
@@ -205,16 +130,10 @@ def _cred_material(cred: str) -> str | None:
         return s.get("HOST_MERGE_KEY") or None
     if cred == "tokenrouter":
         return s.get("HOST_TOKENROUTER_KEY") or None
-    if cred == "groq":
-        return s.get("HOST_GROQ_KEY") or None
     if cred == "xai":
         return s.get("HOST_XAI_KEY") or None
-    if cred == "deepseek":
-        return s.get("HOST_DEEPSEEK_KEY") or None
     if cred == "openai":
         return s.get("HOST_OPENAI_KEY") or None
-    if cred == "meta":
-        return s.get("HOST_META_KEY") or None
     return None
 
 
@@ -298,29 +217,34 @@ def create_provider(body: ProviderCreate, user_id: str = Depends(get_current_use
 @router.get("")
 def list_providers(user_id: str = Depends(get_current_user)):
     databases = db.get_databases()
-    res = databases.list_documents(
-        db.get_database_id(),
-        "providers",
-        queries=[Query.equal("user_id", user_id), Query.limit(100)],
-    )
-    items = [
+    database_id = db.get_database_id()
+    hosts = configured_host_providers()
+    try:
+        res = databases.list_documents(
+            database_id,
+            "providers",
+            queries=[Query.equal("user_id", user_id), Query.limit(100)],
+        )
+    except AppwriteException as exc:
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
+    yours = [
         ProviderOut(
             id=d.id,
             name=d.data["name"],
             base_url=d.data["base_url"],
             masked_key=d.data["masked_key"],
             auth_style=d.data["auth_style"],
-            model_name=d.data.get("model_name", ""),
+            model_name=d.data["model_name"],
         ).model_dump()
         for d in res.documents
     ]
-    return configured_host_providers() + items
+    return hosts + yours
 
 
 def get_model_call_spec(model_id: str, user_id: str) -> tuple[str, str, str, str]:
     """Return (base_url, auth_style, api_key, model_name) for a battle model_id."""
     host = HOST_BY_ID.get(model_id)
-    if host is not None:
+    if host:
         key = _cred_material(host.get("cred", ""))
         if not key:
             raise HTTPException(
@@ -348,20 +272,36 @@ def get_model_call_spec(model_id: str, user_id: str) -> tuple[str, str, str, str
     try:
         doc = databases.get_document(database_id, "providers", model_id)
     except AppwriteException as exc:
-        raise HTTPException(status_code=404, detail="Unknown model_id") from exc
+        raise HTTPException(status_code=404, detail="Provider not found") from exc
     if doc.data.get("user_id") != user_id:
-        raise HTTPException(status_code=403, detail="Not your provider")
+        raise HTTPException(status_code=403, detail="Provider not owned")
     api_key = crypto.decrypt_key(doc.data["encrypted_key"], _fernet_key())
     return (
         doc.data["base_url"],
         doc.data["auth_style"],
         api_key,
-        doc.data.get("model_name") or "",
+        doc.data["model_name"],
     )
 
 
 @router.post("/health")
 def provider_health(body: ProviderHealth, _user_id: str = Depends(get_current_user)):
+    from . import llm_client
+
+    if body.auth_style == "manus":
+        try:
+            text = llm_client.manus_task_completion(
+                api_key=body.api_key,
+                model=body.model or body.model_name or "manus-1.6-lite",
+                messages=[{"role": "user", "content": "Reply with exactly: pong"}],
+                timeout=120.0,
+            )
+        except HTTPException:
+            raise
+        except Exception as exc:
+            raise HTTPException(status_code=502, detail=f"Request failed: {exc}") from exc
+        return {"ok": bool(text), "status_code": 200, "preview": (text or "")[:80]}
+
     headers = {}
     if body.auth_style == "modal_proxy":
         api_key = body.api_key.strip()
@@ -394,7 +334,7 @@ def provider_health(body: ProviderHealth, _user_id: str = Depends(get_current_us
         headers["Authorization"] = f"Bearer {body.api_key}"
     url = body.base_url.rstrip("/") + "/chat/completions"
     payload = {
-        "model": body.model or _modal_kimi_model(),
+        "model": body.model or body.model_name or _modal_kimi_model(),
         "messages": [{"role": "user", "content": "ping"}],
         "max_tokens": 5,
     }

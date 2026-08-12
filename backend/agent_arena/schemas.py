@@ -5,7 +5,9 @@ class ProviderCreate(BaseModel):
     name: str = Field(min_length=1, max_length=100)
     base_url: str = Field(min_length=1)
     api_key: str = Field(min_length=1)
-    auth_style: str = Field(default="bearer", pattern="^(bearer|modal_proxy|custom)$")
+    auth_style: str = Field(
+        default="bearer", pattern="^(bearer|modal_proxy|manus|custom)$"
+    )
     model_name: str = Field(min_length=1, max_length=100)
 
 
@@ -21,7 +23,9 @@ class ProviderOut(BaseModel):
 class ProviderHealth(BaseModel):
     base_url: str = Field(min_length=1)
     api_key: str = Field(min_length=1)
-    auth_style: str = Field(default="bearer", pattern="^(bearer|modal_proxy|custom)$")
+    auth_style: str = Field(
+        default="bearer", pattern="^(bearer|modal_proxy|manus|custom)$"
+    )
     model: str | None = None
     model_name: str | None = None
 

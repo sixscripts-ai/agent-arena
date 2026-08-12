@@ -40,7 +40,7 @@ def test_stream_emits_ordered_events(client):
     try:
         battle = client.post("/battles", json={
             "format_id": _real_format_id(),
-            "model_ids": ["host:openrouter-free", "host:openrouter-free"],
+            "model_ids": ["host:manus-1.6-lite", "host:manus-1.6-lite"],
             "arena_size": 2,
             "timeout_seconds": 600,
             "round_visibility": "isolated",

@@ -41,7 +41,7 @@ def test_internal_model_validates_battle(client, internal_key, monkeypatch):
         fmt_id = formats[0]["id"]
         battle = client.post("/battles", json={
             "format_id": fmt_id,
-            "model_ids": ["host:openrouter-free", "host:openrouter-free"],
+            "model_ids": ["host:manus-1.6-lite", "host:manus-1.6-lite"],
             "arena_size": 2,
             "timeout_seconds": 600,
             "round_visibility": "isolated",
@@ -66,7 +66,7 @@ def test_internal_model_validates_battle(client, internal_key, monkeypatch):
             headers={"X-Internal-Key": internal_key},
             json={
                 "battle_id": bid,
-                "model_id": "host:openrouter-free",
+                "model_id": "host:manus-1.6-lite",
                 "messages": [{"role": "user", "content": "hi"}],
             },
         )
@@ -79,7 +79,7 @@ def test_internal_model_validates_battle(client, internal_key, monkeypatch):
                 headers={"X-Internal-Key": internal_key},
                 json={
                     "battle_id": bid,
-                    "model_id": "host:openrouter-free",
+                    "model_id": "host:manus-1.6-lite",
                     "messages": [{"role": "user", "content": "hi"}],
                 },
             )

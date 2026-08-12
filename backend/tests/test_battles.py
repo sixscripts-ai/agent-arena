@@ -50,7 +50,7 @@ def test_create_battle_wrong_role_count(client):
     try:
         resp = client.post("/battles", json={
             "format_id": _real_format_id(),
-            "model_ids": ["host:openrouter-free"],  # need 2 playable roles
+            "model_ids": ["host:manus-1.6-lite"],  # need 2 playable roles
             "arena_size": 1,
             "timeout_seconds": 600,
             "round_visibility": "isolated",
@@ -69,7 +69,7 @@ def test_create_battle_rejects_unknown_model(client):
     try:
         resp = client.post("/battles", json={
             "format_id": _real_format_id(),
-            "model_ids": ["host:openrouter-free", "not-a-real-provider-id"],
+            "model_ids": ["host:manus-1.6-lite", "not-a-real-provider-id"],
             "arena_size": 2,
             "timeout_seconds": 600,
             "round_visibility": "isolated",
@@ -88,7 +88,7 @@ def test_cancel_stops_battle(client):
     try:
         battle = client.post("/battles", json={
             "format_id": _real_format_id(),
-            "model_ids": ["host:openrouter-free", "host:openrouter-free"],
+            "model_ids": ["host:manus-1.6-lite", "host:manus-1.6-lite"],
             "arena_size": 2,
             "timeout_seconds": 600,
             "round_visibility": "isolated",
@@ -108,7 +108,7 @@ def test_list_battles_saved_filter(client):
     try:
         unsaved = client.post("/battles", json={
             "format_id": _real_format_id(),
-            "model_ids": ["host:openrouter-free", "host:openrouter-free"],
+            "model_ids": ["host:manus-1.6-lite", "host:manus-1.6-lite"],
             "arena_size": 2,
             "timeout_seconds": 600,
             "round_visibility": "isolated",
@@ -116,7 +116,7 @@ def test_list_battles_saved_filter(client):
         }).json()
         saved = client.post("/battles", json={
             "format_id": _real_format_id(),
-            "model_ids": ["host:openrouter-free", "host:openrouter-free"],
+            "model_ids": ["host:manus-1.6-lite", "host:manus-1.6-lite"],
             "arena_size": 2,
             "timeout_seconds": 600,
             "round_visibility": "isolated",
@@ -142,7 +142,7 @@ def test_save_persists_rounds(client):
     try:
         battle = client.post("/battles", json={
             "format_id": _real_format_id(),
-            "model_ids": ["host:openrouter-free", "host:openrouter-free"],
+            "model_ids": ["host:manus-1.6-lite", "host:manus-1.6-lite"],
             "arena_size": 2,
             "timeout_seconds": 600,
             "round_visibility": "isolated",
@@ -171,7 +171,7 @@ def test_unsaved_battle_has_no_artifacts(client):
     try:
         battle = client.post("/battles", json={
             "format_id": _real_format_id(),
-            "model_ids": ["host:openrouter-free", "host:openrouter-free"],
+            "model_ids": ["host:manus-1.6-lite", "host:manus-1.6-lite"],
             "arena_size": 2,
             "timeout_seconds": 600,
             "round_visibility": "isolated",
@@ -201,7 +201,7 @@ def test_runner_failure_marks_battle_failed(client, monkeypatch):
     try:
         battle = client.post("/battles", json={
             "format_id": _real_format_id(),
-            "model_ids": ["host:openrouter-free", "host:openrouter-free"],
+            "model_ids": ["host:manus-1.6-lite", "host:manus-1.6-lite"],
             "arena_size": 2,
             "timeout_seconds": 600,
             "round_visibility": "isolated",
@@ -224,7 +224,7 @@ def test_other_user_cannot_act_on_battle(client):
     try:
         battle = client.post("/battles", json={
             "format_id": _real_format_id(),
-            "model_ids": ["host:openrouter-free", "host:openrouter-free"],
+            "model_ids": ["host:manus-1.6-lite", "host:manus-1.6-lite"],
             "arena_size": 2,
             "timeout_seconds": 600,
             "round_visibility": "isolated",

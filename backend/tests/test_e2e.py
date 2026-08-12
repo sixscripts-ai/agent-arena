@@ -23,7 +23,7 @@ def test_full_battle_lifecycle(client):
                 "/battles",
                 json={
                     "format_id": fmt,
-                    "model_ids": ["host:openrouter-free", "host:openrouter-free"],
+                    "model_ids": ["host:manus-1.6-lite", "host:manus-1.6-lite"],
                     "arena_size": 2,
                     "timeout_seconds": 600,
                     "round_visibility": "isolated",
@@ -37,7 +37,7 @@ def test_full_battle_lifecycle(client):
             "/battles",
             json={
                 "format_id": fmt,
-                "model_ids": ["host:openrouter-free", "host:openrouter-free"],
+                "model_ids": ["host:manus-1.6-lite", "host:manus-1.6-lite"],
                 "arena_size": 2,
                 "timeout_seconds": 600,
                 "round_visibility": "isolated",

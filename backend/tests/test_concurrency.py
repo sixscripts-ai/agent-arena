@@ -22,7 +22,7 @@ def test_active_count_and_cap_rejection(client):
     created = []
     for _ in range(MAX_ACTIVE_BATTLES):
         doc = databases.create_document(database_id, "battles", "unique()", {
-            "user_id": user_id, "format_id": "code-review-duel", "model_ids": ["host:openrouter-free", "host:openrouter-free"],
+            "user_id": user_id, "format_id": "code-review-duel", "model_ids": ["host:manus-1.6-lite", "host:manus-1.6-lite"],
             "arena_size": 2, "status": "running", "timeout_seconds": 600,
             "round_visibility": "isolated", "saved": False,
         })
@@ -34,7 +34,7 @@ def test_active_count_and_cap_rejection(client):
         format_id = formats.documents[0].id
         resp = client.post("/battles", json={
             "format_id": format_id,
-            "model_ids": ["host:openrouter-free", "host:openrouter-free"],
+            "model_ids": ["host:manus-1.6-lite", "host:manus-1.6-lite"],
             "arena_size": 2,
             "timeout_seconds": 600,
             "round_visibility": "isolated",

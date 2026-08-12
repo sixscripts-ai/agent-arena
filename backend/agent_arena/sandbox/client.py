@@ -12,7 +12,7 @@ class Transport(Protocol):
 
 
 class HttpTransport:
-    def __init__(self, base_url: str, internal_key: str, timeout: float = 180.0):
+    def __init__(self, base_url: str, internal_key: str, timeout: float = 600.0):
         self.base_url = base_url.rstrip("/")
         self.internal_key = internal_key
         self.timeout = timeout
