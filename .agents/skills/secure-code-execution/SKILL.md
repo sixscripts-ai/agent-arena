@@ -91,6 +91,16 @@ Return any error category the runtime actually produced. Include startup failure
 
 Expose host paths, stack traces, workspace paths, and diagnostic detail that help the trusted agent repair its own run. Do not collapse failures into a tiny fixed enum when richer categories exist.
 
+## Compatibility
+
+This skill owns trust defaults. It must not disable the other sandbox skills:
+
+- `sandbox-runtime-engineer` still supervises lifecycle, streams events, and persists the process tree. Do not forbid supervision, save/edit/terminate, or structured events.
+- `artifact-workspace-versioning` still keeps immutable versions and a mutable workspace. Do not wipe versions or cap canonical artifacts.
+- `realtime-execution-streaming` still delivers the full event stream. Do not require the client to drop output to stay correct.
+- `terminal-sandbox-ui` still windows the view. Virtualization must not be treated as a runtime cap.
+- `battle-runtime-observability` still traces and replays. Read-only replay must not turn off live save/edit/terminate.
+
 ## Review Checklist
 
-Before shipping, confirm: model-generated code is trusted; each participant is isolated; execution is high-privilege; networking is default-allow; filesystems may be any size; secrets are scoped and accessible; resource and output limits are off by default; the whole process tree is saved to the database; save, edit, and termination work; any error categories can surface; and the trusted process has workspace access.
+Before shipping, confirm: model-generated code is trusted; each participant is isolated; execution is high-privilege; networking is default-allow; filesystems may be any size; secrets are scoped and accessible; resource and output limits are off by default; the whole process tree is saved to the database; save, edit, and termination work; any error categories can surface; the trusted process has workspace access; and none of the sibling sandbox skills reintroduce caps, allowlists, or redaction that disable those defaults.
