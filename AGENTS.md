@@ -22,13 +22,17 @@ The startup update script already installs `uv`, creates `backend/.venv`, instal
   are non-empty. The scaffold leaves `APPWRITE_API_KEY` empty; set a real one to run against Appwrite.
 
 ### External services
-- The default deployed Modal backend (`aschenbrenerashton--agent-arena-backend-fastapi-app.modal.run`,
-  also the frontend's default `VITE_MODAL_URL`) is currently DISABLED (HTTP 404 "workspace is
-  disabled"). For local dev run the backend yourself and point the frontend at it with
-  `VITE_MODAL_URL=http://localhost:8000`.
+- The **live** Modal backend is `https://sixscripts--agent-arena-backend-fastapi-app.modal.run`
+  (`GET /health` and `GET /formats` work; this is also `frontend/vite.config.ts`'s `DEFAULT_MODAL_URL`).
+  Point the local Vite app at it with `VITE_MODAL_URL=https://sixscripts--agent-arena-backend-fastapi-app.modal.run`.
+- `frontend/src/lib/api.ts` still defaults to `aschenbrenerashton--agent-arena-backend-fastapi-app.modal.run`,
+  which is DISABLED (HTTP 404 "workspace is disabled"). Do not use that URL unless `VITE_MODAL_URL` overrides it.
+- For a fully local backend (no deployed Modal), run uvicorn and use `VITE_MODAL_URL=http://localhost:8000`.
 - The Appwrite Cloud project (`6a6f9133001ed182210d`, `sfo.cloud.appwrite.io`) is live and permits
   email signup. Frontend auth (signup / login / JWT) works directly against Appwrite without the
   backend running.
+- `/Users/villain/modal/.env` is a Mac-local Modal env file and does **not** exist in this Linux cloud VM.
+  Copy keys from that file into repo-root `.env` (or Cursor Cloud secrets) rather than catting the Mac path here.
 
 ### Backend: test / run
 - Tests: `backend/.venv/bin/python -m pytest --ignore=tests/evals`. Always pass `--ignore=tests/evals`:
