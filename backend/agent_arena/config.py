@@ -39,4 +39,16 @@ def settings() -> dict:
         "JUDGE_MODAL_SECRET": os.environ.get("JUDGE_MODAL_SECRET", ""),
         "JUDGE_MODAL_PROXY_TOKEN": os.environ.get("JUDGE_MODAL_PROXY_TOKEN", "")
         or os.environ.get("MODAL_PROXY_TOKEN", ""),
+        "JUDGE_MODAL_BASE": os.environ.get(
+            "JUDGE_MODAL_BASE",
+            "https://inference.us-west.modal.direct/v1",
+        ),
+        "JUDGE_MODAL_MODEL": os.environ.get(
+            "JUDGE_MODAL_MODEL",
+            "sixscripts--ep-kimi-k3-server.us-west.modal.direct",
+        ),
+        "BACKEND_PUBLIC_URL": os.environ.get(
+            "BACKEND_PUBLIC_URL",
+            "https://sixscripts--agent-arena-backend-fastapi-app.modal.run",
+        ),
     }

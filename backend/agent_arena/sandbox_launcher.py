@@ -13,9 +13,10 @@ from .sandbox.runner import run_battle_loop
 
 
 def _backend_public_url() -> str:
-    return os.environ.get(
-        "BACKEND_PUBLIC_URL",
-        "https://aschenbrenerashton--agent-arena-backend-fastapi-app.modal.run",
+    return (
+        os.environ.get("BACKEND_PUBLIC_URL")
+        or settings().get("BACKEND_PUBLIC_URL")
+        or "https://sixscripts--agent-arena-backend-fastapi-app.modal.run"
     )
 
 
@@ -185,33 +186,9 @@ def _run_direct(battle_id, databases, database_id, battle, cfg) -> None:
 
 
 def _finalize_scores(databases, database_id, battle_id, battle, scores) -> None:
-    if not scores:
-        return
-    from . import leaderboard
+    from .scoring import finalize_battle_scores
 
-    for mid, value in scores.items():
-        databases.create_document(
-            database_id,
-            "scores",
-            "unique()",
-            {
-                "battle_id": battle_id,
-                "model_id": mid,
-                "score": float(value),
-                "judge_model": "host-judge",
-                "justification": "judged",
-            },
-        )
-    try:
-        leaderboard.apply_result(
-            databases,
-            database_id,
-            battle.data["format_id"],
-            list(battle.data["model_ids"]),
-            scores,
-        )
-    except Exception:
-        pass
+    finalize_battle_scores(databases, database_id, battle_id, battle, scores)
 
 
 def try_spawn_modal_sandbox(battle_id: str) -> str | None:
@@ -224,6 +201,13 @@ def try_spawn_modal_sandbox(battle_id: str) -> str | None:
     if not key:
         return None
     try:
+        databases, _database_id, battle, cfg = _load_battle(battle_id)
+        bootstrap = {
+            "format_config": cfg,
+            "model_ids": list(battle.data["model_ids"]),
+            "round_visibility": battle.data.get("round_visibility", "isolated"),
+            "timeout_seconds": int(battle.data.get("timeout_seconds") or 600),
+        }
         app = modal.App.lookup("agent-arena-backend", create_if_missing=True)
         image = (
             modal.Image.debian_slim(python_version="3.11")
@@ -234,6 +218,7 @@ def try_spawn_modal_sandbox(battle_id: str) -> str | None:
             {
                 "INTERNAL_API_KEY": key,
                 "BACKEND_PUBLIC_URL": _backend_public_url(),
+                "BATTLE_BOOTSTRAP_JSON": json.dumps(bootstrap),
             }
         )
         sb = modal.Sandbox.create(
@@ -248,7 +233,8 @@ def try_spawn_modal_sandbox(battle_id: str) -> str | None:
         return (
             getattr(sb, "object_id", None) or getattr(sb, "sandbox_id", None) or str(sb)
         )
-    except Exception:
+    except Exception as exc:
+        print(f"try_spawn_modal_sandbox failed: {type(exc).__name__}: {exc}")
         return None
 
 
@@ -268,8 +254,29 @@ def start_battle(battle_id: str) -> None:
                 )
             except Exception:
                 pass
+            _set_status(db.get_databases(), db.get_database_id(), battle_id, "running")
             return
     # Default: in-process direct runner (works in tests without Modal)
+    # Tool-using / advanced formats require a real sandbox — mark failed clearly.
+    try:
+        _databases, _database_id, _battle, cfg = _load_battle(battle_id)
+        engine = (cfg.get("engine") or "").lower()
+        if engine in {"agent_tool_race", "advanced"} or "tool-using" in str(
+            cfg.get("id") or cfg.get("slug") or ""
+        ):
+            _set_status(_databases, _database_id, battle_id, "failed")
+            event_bus.publish(
+                battle_id,
+                {
+                    "type": "error",
+                    "data": {
+                        "message": "Modal sandbox required for this format but spawn failed or ARENA_USE_MODAL_SANDBOX unset",
+                    },
+                },
+            )
+            return
+    except Exception:
+        pass
     os.environ.setdefault("ARENA_INPROCESS_DIRECT", "1")
     run_in_process(battle_id)
 

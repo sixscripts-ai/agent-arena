@@ -56,6 +56,8 @@ class FakeTransport:
         if path == "/internal/round":
             self.rounds.append(json)
             return {"ok": True, "event_id": "fake"}
+        if path == "/internal/status":
+            return {"status": "running"}
         raise RuntimeError(f"unknown path {path}")
 
 
@@ -101,3 +103,7 @@ class InternalClient:
             "artifact": artifact,
             "event_type": event_type,
         })
+
+    def status(self, battle_id: str) -> str:
+        data = self.t.post("/internal/status", {"battle_id": battle_id})
+        return str(data.get("status") or "unknown")

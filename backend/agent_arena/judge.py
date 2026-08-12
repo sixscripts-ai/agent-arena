@@ -13,12 +13,18 @@ from . import llm_client
 from .config import settings
 from .redact import sanitize_artifact
 
-DEFAULT_JUDGE_MODEL = "moonshotai/Kimi-K3"
-DEFAULT_JUDGE_BASE = (
-    "https://aschenbrenerashton--ep-kimi-k3-server.us-west.modal.direct/v1"
-)
+DEFAULT_JUDGE_MODEL = "sixscripts--ep-kimi-k3-server.us-west.modal.direct"
+DEFAULT_JUDGE_BASE = "https://inference.us-west.modal.direct/v1"
 SCORE_MIN, SCORE_MAX = 0.0, 100.0
 MAX_ATTEMPTS = 3
+
+
+def _judge_base() -> str:
+    return (settings().get("JUDGE_MODAL_BASE") or DEFAULT_JUDGE_BASE).rstrip("/")
+
+
+def _judge_model() -> str:
+    return settings().get("JUDGE_MODAL_MODEL") or DEFAULT_JUDGE_MODEL
 
 
 def _system_prompt(rubric: str, weights: dict[str, float] | None) -> str:
@@ -62,20 +68,22 @@ def _clamp(score: float) -> float:
 
 def _host_judge_spec() -> tuple[str, str, str, str]:
     s = settings()
+    base = _judge_base()
+    model = _judge_model()
     # New Bearer proxy token takes precedence: wk-xxx.ws-yyy (dot)
     proxy_token = s.get("JUDGE_MODAL_PROXY_TOKEN") or ""
     if proxy_token:
         proxy_token = proxy_token.strip()
         if "." in proxy_token and "wk-" in proxy_token and "ws-" in proxy_token:
-            return DEFAULT_JUDGE_BASE, "modal_proxy", proxy_token, DEFAULT_JUDGE_MODEL
+            return base, "modal_proxy", proxy_token, model
         if ":" in proxy_token:
             parts = [p.strip() for p in proxy_token.split(":")]
             if len(parts) == 2 and parts[0] and parts[1]:
                 return (
-                    DEFAULT_JUDGE_BASE,
+                    base,
                     "modal_proxy",
                     proxy_token,
-                    DEFAULT_JUDGE_MODEL,
+                    model,
                 )
         # incomplete wk- only → fall through to fallback, not old ak/as
         if proxy_token.startswith("wk-"):
@@ -84,10 +92,10 @@ def _host_judge_spec() -> tuple[str, str, str, str]:
             # old ak/as colon pair still valid for some setups
             if ":" in proxy_token:
                 return (
-                    DEFAULT_JUDGE_BASE,
+                    base,
                     "modal_proxy",
                     proxy_token,
-                    DEFAULT_JUDGE_MODEL,
+                    model,
                 )
     # Fallback chain if Modal proxy not configured / incomplete:
     # 1) TokenRouter Kimi-K3-Free (user says only this works) -> 2) Groq -> 3) DeepSeek -> 4) OpenRouter Free
@@ -132,7 +140,7 @@ def _host_judge_spec() -> tuple[str, str, str, str]:
             detail="Judge credentials not configured (no proxy token and no HOST_OPENROUTER_KEY fallback)",
         )
     combined = f"{key}:{secret}"
-    return DEFAULT_JUDGE_BASE, "modal_proxy", combined, DEFAULT_JUDGE_MODEL
+    return base, "modal_proxy", combined, model
 
 
 def judge_battle(

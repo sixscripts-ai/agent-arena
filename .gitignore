@@ -44,3 +44,5 @@ AGENTS.md
 .kilo/package-lock.json
 .superpowers/
 docs/superpowers/plans/
+
+.opencode-imports/

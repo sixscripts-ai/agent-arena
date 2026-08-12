@@ -59,7 +59,7 @@ export default function Home() {
         <div className="col-span-12 lg:col-span-5 grid grid-cols-2 gap-3">
           <div className="card p-5">
             <div className="text-[11px] font-medium text-muted">Formats</div>
-            <div className="mt-2 text-[32px] font-semibold tracking-[-0.02em]">{formats.length || 25}</div>
+            <div className="mt-2 text-[32px] font-semibold tracking-[-0.02em]">{formats.length}</div>
             <div className="mt-1 text-[12px] text-muted">{engines.length - 1} engines</div>
           </div>
           <div className="card p-5">

@@ -1,4 +1,5 @@
 """Sandbox → backend callbacks. Hidden from OpenAPI; auth via X-Internal-Key."""
+
 from __future__ import annotations
 
 import json
@@ -14,6 +15,7 @@ from . import db, event_bus, judge, llm_client
 from .config import settings
 from .providers import get_model_call_spec
 from .redact import sanitize_artifact
+from .scoring import finalize_battle_scores, parse_scores_payload
 
 router = APIRouter(prefix="/internal", tags=["internal"], include_in_schema=False)
 
@@ -48,14 +50,42 @@ def _rate_limit(battle_id: str) -> None:
         _rate_counts[battle_id] = window
 
 
-def _active_battle(databases, database_id: str, battle_id: str):
+def _get_battle(databases, database_id: str, battle_id: str):
     try:
-        battle = databases.get_document(database_id, "battles", battle_id)
+        return databases.get_document(database_id, "battles", battle_id)
     except AppwriteException as exc:
         raise HTTPException(status_code=404, detail="Battle not found") from exc
+
+
+def _active_battle(databases, database_id: str, battle_id: str):
+    battle = _get_battle(databases, database_id, battle_id)
     if battle.data.get("status") not in ("queued", "running"):
         raise HTTPException(status_code=409, detail="battle not active")
     return battle
+
+
+def _apply_battle_status(
+    databases, database_id: str, battle_id: str, battle, status: str
+) -> str | None:
+    """Idempotent status transition. Returns applied status or None if ignored."""
+    st = (status or "").strip().lower()
+    if st not in ("running", "completed", "failed", "cancelled"):
+        return None
+    cur = (battle.data.get("status") or "").lower()
+    if st == "running":
+        if cur not in ("queued", "running"):
+            return None
+    elif cur not in ("queued", "running", st):
+        # Don't regress terminal states (e.g. completed -> failed from late watchdog).
+        return None
+    if cur != st:
+        try:
+            databases.update_document(
+                database_id, "battles", battle_id, {"status": st}
+            )
+        except Exception:
+            return None
+    return st
 
 
 class ModelBody(BaseModel):
@@ -80,6 +110,10 @@ class RoundBody(BaseModel):
     model_id: str
     artifact: str
     event_type: str = "artifact"
+
+
+class StatusBody(BaseModel):
+    battle_id: str
 
 
 @router.post("/model")
@@ -127,28 +161,87 @@ def internal_judge(body: JudgeBody, _ok: bool = Depends(require_internal_key)):
     return result
 
 
+@router.post("/status")
+def internal_status(body: StatusBody, _ok: bool = Depends(require_internal_key)):
+    """Sandbox cancel/watchdog poll — allowed for any battle state."""
+    _rate_limit(body.battle_id)
+    databases = db.get_databases()
+    database_id = db.get_database_id()
+    battle = _get_battle(databases, database_id, body.battle_id)
+    return {"status": battle.data.get("status", "unknown")}
+
+
 @router.post("/round")
 def internal_round(body: RoundBody, _ok: bool = Depends(require_internal_key)):
     _rate_limit(body.battle_id)
     databases = db.get_databases()
     database_id = db.get_database_id()
+    # Terminal status updates must work even if a late retry races past completed.
+    if body.event_type == "battle_status":
+        battle = _get_battle(databases, database_id, body.battle_id)
+        artifact = sanitize_artifact(body.artifact)
+        applied = _apply_battle_status(
+            databases, database_id, body.battle_id, battle, artifact
+        )
+        event_data: dict = {
+            "phase": body.phase,
+            "model_id": body.model_id,
+            "artifact": artifact,
+        }
+        if applied:
+            event_data["status"] = applied
+        event = {"type": body.event_type, "data": event_data}
+        event_bus.publish(body.battle_id, event)
+        return {"ok": True, "event_id": event.get("event_id"), "status": applied}
+
     battle = _active_battle(databases, database_id, body.battle_id)
-    if body.model_id not in battle.data.get("model_ids", []) and body.model_id != "system":
+    if (
+        body.model_id not in battle.data.get("model_ids", [])
+        and body.model_id != "system"
+    ):
         raise HTTPException(status_code=400, detail="model not in battle")
     artifact = sanitize_artifact(body.artifact)
-    databases.create_document(database_id, "rounds", "unique()", {
-        "battle_id": body.battle_id,
-        "phase": body.phase,
-        "model_id": body.model_id,
-        "artifact": artifact,
-    })
-    event = {
-        "type": body.event_type,
-        "data": {
+    databases.create_document(
+        database_id,
+        "rounds",
+        "unique()",
+        {
+            "battle_id": body.battle_id,
             "phase": body.phase,
             "model_id": body.model_id,
             "artifact": artifact,
         },
+    )
+    event_data = {
+        "phase": body.phase,
+        "model_id": body.model_id,
+        "artifact": artifact,
+    }
+    # Sandbox path: scores event arrives before battle_status:completed (base.Executor.finish).
+    if body.event_type == "scores":
+        scores = parse_scores_payload(artifact)
+        if scores:
+            try:
+                parsed = json.loads(artifact) if isinstance(artifact, str) else {}
+                judge_model = (
+                    str(parsed.get("judge_model") or "host-judge")
+                    if isinstance(parsed, dict)
+                    else "host-judge"
+                )
+            except Exception:
+                judge_model = "host-judge"
+            finalize_battle_scores(
+                databases,
+                database_id,
+                body.battle_id,
+                battle,
+                scores,
+                judge_model=judge_model,
+            )
+            event_data["scores"] = scores
+    event = {
+        "type": body.event_type,
+        "data": event_data,
     }
     event_bus.publish(body.battle_id, event)
     return {"ok": True, "event_id": event.get("event_id")}

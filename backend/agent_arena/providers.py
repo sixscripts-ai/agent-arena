@@ -11,10 +11,20 @@ from .schemas import ProviderCreate, ProviderHealth, ProviderOut
 router = APIRouter(prefix="/providers", tags=["providers"])
 
 OPENROUTER_BASE = "https://openrouter.ai/api/v1"
-MODAL_KIMI_BASE = (
-    "https://aschenbrenerashton--ep-kimi-k3-server.us-west.modal.direct/v1"
-)
+DEFAULT_MODAL_KIMI_BASE = "https://inference.us-west.modal.direct/v1"
 HOST_FREE_ID = "host:openrouter-free"
+
+
+def _modal_kimi_base() -> str:
+    return (settings().get("JUDGE_MODAL_BASE") or DEFAULT_MODAL_KIMI_BASE).rstrip("/")
+
+
+def _modal_kimi_model() -> str:
+    return (
+        settings().get("JUDGE_MODAL_MODEL")
+        or "sixscripts--ep-kimi-k3-server.us-west.modal.direct"
+    )
+
 
 # Multi-backend host catalog. Each entry declares how to resolve credentials.
 # Public list only includes entries whose credentials are present.
@@ -23,10 +33,10 @@ HOST_PROVIDERS: list[dict] = [
     {
         "id": "host:modal-kimi",
         "name": "Modal (Kimi-K3)",
-        "base_url": MODAL_KIMI_BASE,
+        "base_url": DEFAULT_MODAL_KIMI_BASE,
         "masked_key": "modal-key…",
         "auth_style": "modal_proxy",
-        "model_name": "moonshotai/Kimi-K3",
+        "model_name": "sixscripts--ep-kimi-k3-server.us-west.modal.direct",
         "cred": "modal_judge",
     },
     # --- OpenRouter free tier (HOST_OPENROUTER_KEY) ---
@@ -183,6 +193,9 @@ def _cred_material(cred: str) -> str | None:
     if cred == "openrouter":
         return s.get("HOST_OPENROUTER_KEY") or None
     if cred == "modal_judge":
+        proxy = s.get("JUDGE_MODAL_PROXY_TOKEN") or ""
+        if proxy and (("." in proxy and "wk-" in proxy) or ":" in proxy):
+            return proxy
         key = s.get("JUDGE_MODAL_KEY") or ""
         secret = s.get("JUDGE_MODAL_SECRET") or ""
         if key and secret:
@@ -210,9 +223,16 @@ def _host_configured(p: dict) -> bool:
 
 
 def configured_host_providers() -> list[dict]:
-    return [
-        {k: p[k] for k in _PUBLIC_KEYS} for p in HOST_PROVIDERS if _host_configured(p)
-    ]
+    out = []
+    for p in HOST_PROVIDERS:
+        if not _host_configured(p):
+            continue
+        row = {k: p[k] for k in _PUBLIC_KEYS}
+        if p.get("cred") == "modal_judge":
+            row["base_url"] = _modal_kimi_base()
+            row["model_name"] = _modal_kimi_model()
+        out.append(row)
+    return out
 
 
 def _fernet_key() -> bytes:
@@ -307,11 +327,21 @@ def get_model_call_spec(model_id: str, user_id: str) -> tuple[str, str, str, str
                 status_code=500,
                 detail=f"Host credentials not configured for {model_id}",
             )
+        base = (
+            _modal_kimi_base()
+            if host.get("cred") == "modal_judge"
+            else host["base_url"]
+        )
+        model_name = (
+            _modal_kimi_model()
+            if host.get("cred") == "modal_judge"
+            else host["model_name"]
+        )
         return (
-            host["base_url"],
+            base,
             host["auth_style"],
             key,
-            host["model_name"],
+            model_name,
         )
     databases = db.get_databases()
     database_id = db.get_database_id()
@@ -364,7 +394,7 @@ def provider_health(body: ProviderHealth, _user_id: str = Depends(get_current_us
         headers["Authorization"] = f"Bearer {body.api_key}"
     url = body.base_url.rstrip("/") + "/chat/completions"
     payload = {
-        "model": body.model or "moonshotai/Kimi-K3",
+        "model": body.model or _modal_kimi_model(),
         "messages": [{"role": "user", "content": "ping"}],
         "max_tokens": 5,
     }
