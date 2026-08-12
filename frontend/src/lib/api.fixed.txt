@@ -1,1 +1,0 @@
-const BASE = (import.meta.env.VITE_MODAL_URL || "https://sixscripts--agent-arena-backend-fastapi-app.modal.run").replace(/\/$/, "");
