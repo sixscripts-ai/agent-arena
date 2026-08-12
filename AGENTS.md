@@ -32,7 +32,13 @@ The startup update script already installs `uv`, creates `backend/.venv`, instal
   email signup. Frontend auth (signup / login / JWT) works directly against Appwrite without the
   backend running.
 - `/Users/villain/modal/.env` is a Mac-local Modal env file and does **not** exist in this Linux cloud VM.
-  Copy keys from that file into repo-root `.env` (or Cursor Cloud secrets) rather than catting the Mac path here.
+  Equivalent Modal CLI tokens were recovered from git history (`.kilo/kilo.json` on older commits,
+  `MEM0_DEFAULT_USER_ID=villain`) and written to local gitignored `.env` as `JUDGE_MODAL_KEY` /
+  `JUDGE_MODAL_SECRET` plus `~/.modal.toml` (profile `aschenbrenerashton`). That workspace is
+  **spend-capped** (`Workspace ac-FcK37hwF7BgQXQSxI45KNV has exceeded its spend limit`), which is
+  why `*.modal.run` returns 404. The deployed dotenv secret `st-F1YD6yTlOmB1oFSPORKPfj` still exists
+  on that app but cannot be dumped without running a container. `APPWRITE_API_KEY` and `HOST_*_KEY`
+  were never committed; they still need to be pasted. Rotate the Modal tokens — they lived in git.
 
 ### Backend: test / run
 - Tests: `backend/.venv/bin/python -m pytest --ignore=tests/evals`. Always pass `--ignore=tests/evals`:
