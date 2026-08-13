@@ -105,3 +105,47 @@ def test_scripted_executor_calls_models():
         round_visibility="isolated",
     )
     assert arts[0]["artifact"] == "move-a"
+
+
+def test_http_transport_follows_redirects():
+    """Sandbox client must follow Modal gateway 303s (previously JSONDecodeError on empty body)."""
+    import httpx
+    from agent_arena.sandbox.client import HttpTransport
+
+    calls = {"n": 0}
+
+    def handler(request):
+        calls["n"] += 1
+        if calls["n"] == 1:
+            return httpx.Response(
+                303, headers={"location": "http://backend/internal/model"}
+            )
+        return httpx.Response(200, json={"content": "hi from model"})
+
+    client = httpx.Client(transport=httpx.MockTransport(handler))
+    t = HttpTransport("http://backend", "k", timeout=10)
+    t.client = client
+    out = t.post("/internal/model", {"x": 1})
+    assert out == {"content": "hi from model"}
+    assert calls["n"] == 2
+
+
+def test_http_transport_retries_non_json():
+    """A 200 with empty body must be retried, not surface as JSONDecodeError."""
+    import httpx
+    from agent_arena.sandbox.client import HttpTransport
+
+    calls = {"n": 0}
+
+    def handler(request):
+        calls["n"] += 1
+        if calls["n"] <= 2:
+            return httpx.Response(200, content=b"")
+        return httpx.Response(200, json={"content": "ok"})
+
+    client = httpx.Client(transport=httpx.MockTransport(handler))
+    t = HttpTransport("http://backend", "k", timeout=10)
+    t.client = client
+    out = t.post("/internal/model", {"x": 1})
+    assert out == {"content": "ok"}
+    assert calls["n"] == 3

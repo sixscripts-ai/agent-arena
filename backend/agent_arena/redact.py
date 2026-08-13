@@ -14,7 +14,7 @@ REDACT_PATTERNS = [
     r"as-[A-Za-z0-9]{16,}",
 ]
 
-ARTIFACT_MAX_BYTES = 100_000
+ARTIFACT_MAX_BYTES = 1_000_000
 
 
 def redact(text: str) -> str:
@@ -25,4 +25,6 @@ def redact(text: str) -> str:
 
 def sanitize_artifact(text: str, max_bytes: int = ARTIFACT_MAX_BYTES) -> str:
     redacted = redact(text)
-    return redacted.encode("utf-8", errors="ignore")[:max_bytes].decode("utf-8", errors="ignore")
+    return redacted.encode("utf-8", errors="ignore")[:max_bytes].decode(
+        "utf-8", errors="ignore"
+    )

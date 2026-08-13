@@ -238,6 +238,18 @@ def try_spawn_modal_sandbox(battle_id: str) -> str:
     skills_dir = _skills_dir()
     image = (
         modal.Image.debian_slim(python_version="3.11")
+        .apt_install(
+            "build-essential",
+            "git",
+            "curl",
+            "wget",
+            "ripgrep",
+            "tree",
+            "jq",
+            "nodejs",
+            "npm",
+            "ca-certificates",
+        )
         .pip_install("httpx", "pytest")
         .add_local_python_source("agent_arena")
     )
@@ -258,6 +270,7 @@ def try_spawn_modal_sandbox(battle_id: str) -> str:
         image=image,
         secrets=[secret],
         timeout=int(os.environ.get("SANDBOX_TIMEOUT", "900")),
+        encrypted_ports=[8080, 8081],
         app=app,
     )
     sandbox_id = (
@@ -265,7 +278,56 @@ def try_spawn_modal_sandbox(battle_id: str) -> str:
     )
     if not sandbox_id:
         raise RuntimeError("Modal sandbox created without an id")
+    # Preview tunnels: 8080 -> player_a (model_ids[0]), 8081 -> player_b (model_ids[1])
+    _persist_preview_urls(battle_id, list(battle.data["model_ids"]), sb)
     return sandbox_id
+
+
+def _persist_preview_urls(battle_id: str, model_ids: list[str], sb) -> None:
+    """Wait briefly for Modal tunnels, then persist + publish preview URLs."""
+    try:
+        tunnels = {}
+        for _ in range(30):
+            try:
+                tunnels = sb.tunnels()
+                if tunnels:
+                    break
+            except Exception:
+                pass
+            time.sleep(1)
+        if not tunnels:
+            return
+        previews = {}
+        model_by_port = {
+            8080: model_ids[0] if len(model_ids) > 0 else "",
+            8081: model_ids[1] if len(model_ids) > 1 else "",
+        }
+        for port, tunnel in tunnels.items():
+            url = getattr(tunnel, "url", None)
+            if url and port in model_by_port and model_by_port[port]:
+                previews[model_by_port[port]] = url
+        if not previews:
+            return
+        databases = db.get_databases()
+        try:
+            databases.update_document(
+                db.get_database_id(),
+                "battles",
+                battle_id,
+                {"preview_urls": json.dumps(previews)},
+            )
+        except Exception:
+            pass
+        for model_id, url in previews.items():
+            event_bus.publish(
+                battle_id,
+                {
+                    "type": "preview",
+                    "data": {"model_id": model_id, "url": url},
+                },
+            )
+    except Exception:
+        pass
 
 
 def _fail_with_reason(battle_id: str, reason: str) -> None:

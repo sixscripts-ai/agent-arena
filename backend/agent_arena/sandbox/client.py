@@ -17,6 +17,7 @@ class HttpTransport:
         self.base_url = base_url.rstrip("/")
         self.internal_key = internal_key
         self.timeout = timeout
+        self.client = httpx.Client(timeout=timeout, follow_redirects=True)
 
     def post(self, path: str, json: dict) -> dict:
         url = self.base_url + path
@@ -24,14 +25,21 @@ class HttpTransport:
         last_err: Exception | None = None
         for attempt in range(3):
             try:
-                resp = httpx.post(url, headers=headers, json=json, timeout=self.timeout)
+                resp = self.client.post(url, headers=headers, json=json)
                 if resp.status_code >= 500:
                     raise httpx.HTTPError(f"server {resp.status_code}")
                 if resp.status_code >= 400:
                     raise RuntimeError(
                         f"internal {path} failed: {resp.status_code} {resp.text[:200]}"
                     )
-                return resp.json()
+                try:
+                    return resp.json()
+                except ValueError as exc:
+                    raise RuntimeError(
+                        f"internal {path} returned non-JSON body "
+                        f"(status {resp.status_code}, {len(resp.content)} bytes): "
+                        f"{resp.text[:120]!r}"
+                    ) from exc
             except (httpx.HTTPError, RuntimeError) as exc:
                 last_err = exc
                 if isinstance(exc, RuntimeError) and "failed: 4" in str(exc):

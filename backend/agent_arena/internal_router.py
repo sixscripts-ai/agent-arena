@@ -120,6 +120,98 @@ def _finalize_scores(databases, database_id: str, battle_id: str, scores: dict) 
     return True
 
 
+def _parse_executor_results(databases, database_id: str, battle_id: str) -> list[dict]:
+    """Load EXECUTOR_RESULT payloads from durable battle_events."""
+    out: list[dict] = []
+    try:
+        res = databases.list_documents(
+            database_id,
+            "battle_events",
+            queries=[Query.equal("battle_id", battle_id), Query.limit(200)],
+        )
+    except Exception:
+        return out
+    for doc in res.documents:
+        payload = doc.data.get("payload") or ""
+        try:
+            event = json.loads(payload) if isinstance(payload, str) else payload
+        except Exception:
+            continue
+        if not isinstance(event, dict) or event.get("type") != "result":
+            continue
+        artifact = str((event.get("data") or {}).get("artifact") or "")
+        marker = "EXECUTOR_RESULT:"
+        if marker not in artifact:
+            continue
+        raw = artifact.split(marker, 1)[1].strip()
+        try:
+            result = json.loads(raw)
+        except Exception:
+            continue
+        if isinstance(result, dict):
+            out.append(result)
+    return out
+
+
+def _apply_self_learning(
+    databases, database_id: str, battle: dict, battle_id: str, results: list[dict]
+) -> None:
+    """Persist skill Elo + memory from executor results (runs on backend, not sandbox)."""
+    if not results:
+        return
+    from .memory import maybe_remember
+    from .skills_registry import record_outcome
+
+    sorted_res = sorted(
+        results,
+        key=lambda x: (bool(x.get("passed")), -int(x.get("steps") or 999)),
+        reverse=True,
+    )
+    winner = sorted_res[0]
+    format_name = ""
+    try:
+        fmt = databases.get_document(
+            database_id, "formats", battle.get("format_id", "")
+        )
+        format_name = str(fmt.data.get("name") or "")
+    except Exception:
+        format_name = str(battle.get("format_id") or "")
+    try:
+        maybe_remember(
+            databases,
+            database_id,
+            insight=(
+                f"Battle {battle_id} format {format_name} "
+                f"winner {winner.get('model_id')} chose {winner.get('chosen_skills')} "
+                f"theory {str(winner.get('theory') or '')[:300]} beat opponent picks "
+                f"{[r.get('chosen_skills') for r in results if r is not winner]}. "
+                "Skills to beat opponent technique emerged."
+            ),
+            battle_id=battle_id,
+            model_id=str(winner.get("model_id") or ""),
+            format_name=format_name,
+            chosen_skills=list(winner.get("chosen_skills") or []),
+            theory=str(winner.get("theory") or ""),
+            outcome=str(winner.get("outcome") or ""),
+            user_id=str(battle.get("user_id") or "system"),
+        )
+    except Exception:
+        pass
+    for r in results:
+        outcome = "win" if r is winner else "loss"
+        for chosen in list(r.get("chosen_skills") or [])[:5]:
+            try:
+                record_outcome(
+                    databases,
+                    database_id,
+                    str(chosen),
+                    outcome=outcome,
+                    tier="general",
+                )
+            except Exception:
+                pass
+
+
 @router.post("/finalize")
 def internal_finalize(body: FinalizeBody, _ok: bool = Depends(require_internal_key)):
     """Sandbox reports final outcome: persist scores, update battle status, apply Elo."""
@@ -147,6 +239,14 @@ def internal_finalize(body: FinalizeBody, _ok: bool = Depends(require_internal_k
                 )
         except Exception:
             pass
+    # Self-learning on backend (sandbox has no Appwrite credentials)
+    try:
+        results = _parse_executor_results(databases, database_id, body.battle_id)
+        _apply_self_learning(
+            databases, database_id, battle.data, body.battle_id, results
+        )
+    except Exception:
+        pass
     databases.update_document(
         database_id, "battles", body.battle_id, {"status": status}
     )

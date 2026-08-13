@@ -14,6 +14,7 @@ _ENGINE_REGISTRY = {
     "script_vs_defense": ScriptedExecutor,
     "high_complexity": ScriptedExecutor,
     "agent_tool_race": AdvancedExecutor,
+    "universal": AdvancedExecutor,
 }
 
 
@@ -30,5 +31,8 @@ def get_executor(engine_or_config):
     cls = FORMAT_EXECUTORS.get(slug)
     if cls is not None:
         return cls()
+    # A format opts into the universal toolbelt engine with `universal: true`
+    if cfg.get("universal"):
+        return AdvancedExecutor()
     engine = cfg.get("engine", "scripted")
     return _ENGINE_REGISTRY.get(engine, ScriptedExecutor)()

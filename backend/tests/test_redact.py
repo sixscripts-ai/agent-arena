@@ -1,4 +1,4 @@
-from agent_arena.redact import REDACT_PATTERNS, sanitize_artifact
+from agent_arena.redact import REDACT_PATTERNS, sanitize_artifact, ARTIFACT_MAX_BYTES
 
 
 def test_four_spec_patterns_present():
@@ -30,22 +30,22 @@ def test_does_not_mangle_short_secretlike_text():
 
 
 def test_truncates_oversized_artifact():
-    text = "x" * 200_000
+    text = "x" * (ARTIFACT_MAX_BYTES * 2)
     out = sanitize_artifact(text)
-    assert len(out.encode()) <= 100_000
+    assert len(out.encode()) <= ARTIFACT_MAX_BYTES
 
 
 def test_truncates_multibyte_without_crashing():
-    text = "\u4e2d" * 200_000
+    text = "\u4e2d" * (ARTIFACT_MAX_BYTES * 2)
     out = sanitize_artifact(text)
-    assert len(out.encode()) <= 100_000
+    assert len(out.encode()) <= ARTIFACT_MAX_BYTES
 
 
 def test_redacts_secret_straddling_truncation_boundary():
-    padding = "x" * (100_000 - 10)
+    padding = "x" * (ARTIFACT_MAX_BYTES - 10)
     text = padding + "sk-abcdefghijklmnopqrstuvwxyz"
     out = sanitize_artifact(text)
-    assert len(out.encode()) <= 100_000
+    assert len(out.encode()) <= ARTIFACT_MAX_BYTES
     # Redaction happens BEFORE truncation, so the secret is fully replaced and no
     # partial "sk-..." prefix can leak past the byte cap (regression for a real
     # leak where truncate-then-redact left "sk-abcdefg" visible).

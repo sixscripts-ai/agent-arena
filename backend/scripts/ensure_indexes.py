@@ -1,4 +1,5 @@
 """Ensure Appwrite indexes exist for Agent Arena collections."""
+
 import time
 from agent_arena import db
 
@@ -34,7 +35,17 @@ INDEXES = {
     "formats": [
         ("name_idx", "key", ["name"]),
     ],
+    "skills": [
+        ("skill_idx", "key", ["skill"]),
+    ],
+    "memories": [
+        ("user_id_idx", "key", ["user_id"]),
+    ],
+    "targets": [
+        ("id_idx", "key", ["id"]),
+    ],
 }
+
 
 def ensure():
     databases = db.get_databases()
@@ -58,6 +69,7 @@ def ensure():
             except Exception as e:
                 # may already exist or attribute not available yet
                 print(f"  failed {coll}.{key}: {e}")
+
 
 if __name__ == "__main__":
     ensure()

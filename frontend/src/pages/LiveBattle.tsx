@@ -32,7 +32,11 @@ function formatElapsed(ms: number): string {
 }
 
 function timeLabel(t: number): string {
-  return new Date(t).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+  return new Date(t).toLocaleTimeString([], {
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+  });
 }
 
 function preview(text: string): string {
@@ -60,13 +64,18 @@ export default function LiveBattle() {
   const [copiedId, setCopiedId] = useState(false);
   const [activityFilter, setActivityFilter] = useState<ActivityFilter>("all");
   const [now, setNow] = useState(Date.now());
+  const [previewUrls, setPreviewUrls] = useState<Record<string, string>>({});
 
   const sessionStartedRef = useRef(Date.now());
   const statusRef = useRef(status);
   const phaseRef = useRef(phase);
 
-  useEffect(() => { statusRef.current = status; }, [status]);
-  useEffect(() => { phaseRef.current = phase; }, [phase]);
+  useEffect(() => {
+    statusRef.current = status;
+  }, [status]);
+  useEffect(() => {
+    phaseRef.current = phase;
+  }, [phase]);
 
   useEffect(() => {
     if (TERMINAL_STATES.has(status)) return;
@@ -84,10 +93,14 @@ export default function LiveBattle() {
         if (!active) return;
         setBattle(b);
         setStatus(b.status);
+        if (b.preview_urls && Object.keys(b.preview_urls).length) {
+          setPreviewUrls(b.preview_urls);
+        }
 
         try {
           const persisted = await api.artifacts(token, id);
-          if (!active || !Array.isArray(persisted) || persisted.length === 0) return;
+          if (!active || !Array.isArray(persisted) || persisted.length === 0)
+            return;
           const base = Date.now() - persisted.length;
           setArts((current) => {
             if (current.length) return current;
@@ -103,10 +116,13 @@ export default function LiveBattle() {
           // A live stream can still work when persisted artifacts are unavailable.
         }
       } catch (e) {
-        if (active) setErr(e instanceof Error ? e.message : "Battle failed to load");
+        if (active)
+          setErr(e instanceof Error ? e.message : "Battle failed to load");
       }
     })();
-    return () => { active = false; };
+    return () => {
+      active = false;
+    };
   }, [jwt, id, refreshJwt]);
 
   useEffect(() => {
@@ -144,19 +160,28 @@ export default function LiveBattle() {
             }
 
             if (["artifact", "transcript", "action_log"].includes(ev.event)) {
-              const artifact = d?.artifact ?? wrapped?.artifact ?? d?.message ?? JSON.stringify(data);
+              const artifact =
+                d?.artifact ??
+                wrapped?.artifact ??
+                d?.message ??
+                JSON.stringify(data);
               const modelId = d?.model_id || wrapped?.model_id || "system";
               const eventPhase = d?.phase || wrapped?.phase || phaseRef.current;
-              setArts((previous) => [
-                ...previous,
-                {
-                  phase: eventPhase,
-                  model_id: modelId,
-                  artifact: typeof artifact === "string" ? artifact : JSON.stringify(artifact),
-                  t: Date.now(),
-                  kind: ev.event,
-                },
-              ].slice(-300));
+              setArts((previous) =>
+                [
+                  ...previous,
+                  {
+                    phase: eventPhase,
+                    model_id: modelId,
+                    artifact:
+                      typeof artifact === "string"
+                        ? artifact
+                        : JSON.stringify(artifact),
+                    t: Date.now(),
+                    kind: ev.event,
+                  },
+                ].slice(-300),
+              );
             }
 
             if (ev.event === "scores") {
@@ -172,21 +197,37 @@ export default function LiveBattle() {
                 else if (parsed?.data?.scores) setScores(parsed.data.scores);
               } catch {}
             }
+
+            if (ev.event === "preview") {
+              const modelId = d?.model_id || wrapped?.model_id;
+              const url = d?.url || wrapped?.url;
+              if (modelId && url) {
+                setPreviewUrls((previous) => ({ ...previous, [modelId]: url }));
+              }
+            }
           },
-          controller.signal
+          controller.signal,
         );
 
         if (!cancelled && !TERMINAL_STATES.has(statusRef.current)) {
-          await new Promise((resolve) => window.setTimeout(resolve, Math.min(1000 * 2 ** attempt, 8000)));
+          await new Promise((resolve) =>
+            window.setTimeout(resolve, Math.min(1000 * 2 ** attempt, 8000)),
+          );
           await connect(Math.min(attempt + 1, 4));
         }
       } catch (e) {
         if (cancelled) return;
         if (attempt < 4) {
-          await new Promise((resolve) => window.setTimeout(resolve, 1000 * 2 ** attempt));
+          await new Promise((resolve) =>
+            window.setTimeout(resolve, 1000 * 2 ** attempt),
+          );
           await connect(attempt + 1);
         } else if (!TERMINAL_STATES.has(statusRef.current)) {
-          setErr(e instanceof Error ? `Live stream disconnected: ${e.message}` : "Live stream disconnected");
+          setErr(
+            e instanceof Error
+              ? `Live stream disconnected: ${e.message}`
+              : "Live stream disconnected",
+          );
         }
       }
     };
@@ -219,13 +260,22 @@ export default function LiveBattle() {
   }, [arts, phase]);
 
   const activity = useMemo(() => {
-    const filtered = activityFilter === "all" ? arts : arts.filter((item) => item.phase === activityFilter);
+    const filtered =
+      activityFilter === "all"
+        ? arts
+        : arts.filter((item) => item.phase === activityFilter);
     return filtered.slice(-14).reverse();
   }, [arts, activityFilter]);
 
   const winner = useMemo(() => {
     if (!scores || !modelIds.length) return null;
-    return modelIds.reduce((best, model) => (Number(scores[model] ?? -Infinity) > Number(scores[best] ?? -Infinity) ? model : best), modelIds[0]);
+    return modelIds.reduce(
+      (best, model) =>
+        Number(scores[model] ?? -Infinity) > Number(scores[best] ?? -Infinity)
+          ? model
+          : best,
+      modelIds[0],
+    );
   }, [scores, modelIds]);
 
   const startAt = arts[0]?.t || sessionStartedRef.current;
@@ -271,21 +321,28 @@ export default function LiveBattle() {
     return (
       <div className="grid min-h-[70vh] place-items-center px-6">
         <div className="max-w-[36ch] space-y-3 text-center">
-          <div className="font-mono text-[10px] uppercase tracking-[0.18em] text-accent">Stream locked</div>
-          <p className="text-[14px] text-muted">This bout is private. Log in to watch the live stream.</p>
-          <Link to="/login" className="btn btn-primary mx-auto h-10 px-6">Log in</Link>
+          <div className="font-mono text-[10px] uppercase tracking-[0.18em] text-accent">
+            Stream locked
+          </div>
+          <p className="text-[14px] text-muted">
+            This bout is private. Log in to watch the live stream.
+          </p>
+          <Link to="/login" className="btn btn-primary mx-auto h-10 px-6">
+            Log in
+          </Link>
         </div>
       </div>
     );
   }
 
-  const statusClass = status === "completed"
-    ? "bg-accent text-accent-fg"
-    : status === "running"
+  const statusClass =
+    status === "completed"
       ? "bg-accent text-accent-fg"
-      : status === "failed" || status === "cancelled"
-        ? "bg-danger text-white"
-        : "border border-border text-muted";
+      : status === "running"
+        ? "bg-accent text-accent-fg"
+        : status === "failed" || status === "cancelled"
+          ? "bg-danger text-white"
+          : "border border-border text-muted";
 
   const fighters = modelIds.length ? modelIds : ["model_a", "model_b"];
 
@@ -295,23 +352,47 @@ export default function LiveBattle() {
         <div className="mx-auto flex max-w-[1360px] flex-col gap-4 px-6 py-5 lg:flex-row lg:items-end lg:justify-between">
           <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-2">
-              <span className={`inline-flex items-center gap-1.5 px-2 py-1 font-mono text-[9px] uppercase tracking-[0.14em] ${statusClass}`}>
-                {status === "running" && <span className="h-1.5 w-1.5 animate-pulse bg-current" />}
+              <span
+                className={`inline-flex items-center gap-1.5 px-2 py-1 font-mono text-[9px] uppercase tracking-[0.14em] ${statusClass}`}
+              >
+                {status === "running" && (
+                  <span className="h-1.5 w-1.5 animate-pulse bg-current" />
+                )}
                 {status === "running" ? "live" : status}
               </span>
-              <span className="font-mono text-[10px] uppercase tracking-[0.16em] text-muted">{elapsed}</span>
+              <span className="font-mono text-[10px] uppercase tracking-[0.16em] text-muted">
+                {elapsed}
+              </span>
             </div>
             <h1 className="mt-2 truncate font-display text-[36px] leading-none tracking-[-0.04em] md:text-[48px]">
               {battle?.format_id || "Battle"}
             </h1>
             <div className="mt-3 flex flex-wrap items-center gap-3 font-mono text-[10px] uppercase tracking-[0.12em] text-muted">
-              <button type="button" onClick={copyBattleId} className="flex items-center gap-1 hover:text-foreground" title="Copy battle id">
-                {copiedId ? <Check className="h-3 w-3" /> : <Copy className="h-3 w-3" />}
+              <button
+                type="button"
+                onClick={copyBattleId}
+                className="flex items-center gap-1 hover:text-foreground"
+                title="Copy battle id"
+              >
+                {copiedId ? (
+                  <Check className="h-3 w-3" />
+                ) : (
+                  <Copy className="h-3 w-3" />
+                )}
                 {String(id).slice(0, 8)}
               </button>
-              <span className="flex items-center gap-1"><Eye className="h-3 w-3" />{battle?.round_visibility || "isolated"}</span>
-              <span className="flex items-center gap-1"><Clock3 className="h-3 w-3" />{battle?.timeout_seconds || 600}s</span>
-              <span className="flex items-center gap-1"><Activity className="h-3 w-3" />{arts.length} events / {modelIds.length} agents</span>
+              <span className="flex items-center gap-1">
+                <Eye className="h-3 w-3" />
+                {battle?.round_visibility || "isolated"}
+              </span>
+              <span className="flex items-center gap-1">
+                <Clock3 className="h-3 w-3" />
+                {battle?.timeout_seconds || 600}s
+              </span>
+              <span className="flex items-center gap-1">
+                <Activity className="h-3 w-3" />
+                {arts.length} events / {modelIds.length} agents
+              </span>
             </div>
           </div>
 
@@ -322,7 +403,8 @@ export default function LiveBattle() {
               disabled={busy === "save" || !!battle?.saved}
               className="btn btn-ghost h-10 px-4 text-[11px]"
             >
-              <Save className="h-3.5 w-3.5" /> {battle?.saved ? "Saved" : "Save"}
+              <Save className="h-3.5 w-3.5" />{" "}
+              {battle?.saved ? "Saved" : "Save"}
             </button>
             <button
               type="button"
@@ -336,7 +418,9 @@ export default function LiveBattle() {
         </div>
 
         <div className="flex min-h-[48px] items-center gap-0 overflow-x-auto border-t border-border">
-          <span className="shrink-0 px-6 font-mono text-[9px] uppercase tracking-[0.16em] text-muted">Phase</span>
+          <span className="shrink-0 px-6 font-mono text-[9px] uppercase tracking-[0.16em] text-muted">
+            Phase
+          </span>
           {phases.map((itemPhase, index) => {
             const active = itemPhase === phase && !TERMINAL_STATES.has(status);
             const phaseIndex = phases.indexOf(phase);
@@ -350,7 +434,11 @@ export default function LiveBattle() {
               >
                 <span>{String(index + 1).padStart(2, "0")}</span>
                 <span>{itemPhase}</span>
-                {active ? <Radio className="h-3 w-3 animate-pulse" /> : done ? <CheckCircle2 className="h-3 w-3" /> : null}
+                {active ? (
+                  <Radio className="h-3 w-3 animate-pulse" />
+                ) : done ? (
+                  <CheckCircle2 className="h-3 w-3" />
+                ) : null}
               </button>
             );
           })}
@@ -368,18 +456,32 @@ export default function LiveBattle() {
         <div className="flex items-start gap-3 border-b border-danger px-6 py-3 text-[11px] text-danger">
           <XCircle className="mt-0.5 h-4 w-4 shrink-0" />
           <span className="min-w-0 flex-1 break-words font-mono">{err}</span>
-          <button type="button" onClick={() => setErr(null)} className="shrink-0 underline underline-offset-2">dismiss</button>
+          <button
+            type="button"
+            onClick={() => setErr(null)}
+            className="shrink-0 underline underline-offset-2"
+          >
+            dismiss
+          </button>
         </div>
       )}
 
       <div className="mx-auto grid max-w-[1360px] grid-cols-12">
         {fighters.map((modelId, index) => {
           const modelHistory = histories.get(modelId) || [];
-          const artifactHistory = modelHistory.filter((item) => !item.kind || item.kind === "artifact");
-          const latest = artifactHistory[artifactHistory.length - 1]?.artifact || modelHistory[modelHistory.length - 1]?.artifact || "";
+          const artifactHistory = modelHistory.filter(
+            (item) => !item.kind || item.kind === "artifact",
+          );
+          const latest =
+            artifactHistory[artifactHistory.length - 1]?.artifact ||
+            modelHistory[modelHistory.length - 1]?.artifact ||
+            "";
           const paneColor = "accent";
           return (
-            <div key={modelId} className="col-span-12 border-b border-border lg:col-span-6 lg:border-r lg:last:border-r-0">
+            <div
+              key={modelId}
+              className="col-span-12 border-b border-border lg:col-span-6 lg:border-r lg:last:border-r-0"
+            >
               <CodePane
                 modelId={modelId}
                 label={modelId}
@@ -389,6 +491,7 @@ export default function LiveBattle() {
                 events={modelHistory}
                 status={status}
                 color={paneColor}
+                previewUrl={previewUrls[modelId]}
                 artifactMeta={`${(latest.length / 1024).toFixed(1)}kb · ${latest ? latest.split("\n").length : 0} lines`}
                 win={winner === modelId && status === "completed"}
                 winText="winner"
@@ -402,8 +505,12 @@ export default function LiveBattle() {
         <section className="col-span-12 min-h-0 overflow-hidden lg:col-span-8 lg:border-r lg:border-border">
           <header className="flex items-center justify-between gap-3 border-b border-border px-6 py-3">
             <div>
-              <div className="font-mono text-[10px] uppercase tracking-[0.16em]">Activity</div>
-              <div className="mt-0.5 font-mono text-[9px] uppercase tracking-[0.12em] text-muted">newest first</div>
+              <div className="font-mono text-[10px] uppercase tracking-[0.16em]">
+                Activity
+              </div>
+              <div className="mt-0.5 font-mono text-[9px] uppercase tracking-[0.12em] text-muted">
+                newest first
+              </div>
             </div>
             <div className="flex items-center gap-0 overflow-x-auto">
               <button
@@ -433,11 +540,27 @@ export default function LiveBattle() {
                   const isTool = item.kind === "action_log";
                   const isArtifact = item.kind === "artifact";
                   return (
-                    <div key={`${item.t}-${index}`} className="grid grid-cols-[66px_68px_90px_minmax(0,1fr)] items-start gap-2 border-b border-codeBorder px-4 py-2 font-mono text-[9px] leading-4">
+                    <div
+                      key={`${item.t}-${index}`}
+                      className="grid grid-cols-[66px_68px_90px_minmax(0,1fr)] items-start gap-2 border-b border-codeBorder px-4 py-2 font-mono text-[9px] leading-4"
+                    >
                       <span className="text-lineNo">{timeLabel(item.t)}</span>
-                      <span className={isTool || isArtifact ? "text-accent" : "text-muted"}>{eventLabel(item.kind)}</span>
-                      <span className="truncate text-lineNo">{item.model_id}</span>
-                      <span className="min-w-0 text-codeFg/85"><span className="mr-2 uppercase text-lineNo">{item.phase}</span>{preview(item.artifact)}</span>
+                      <span
+                        className={
+                          isTool || isArtifact ? "text-accent" : "text-muted"
+                        }
+                      >
+                        {eventLabel(item.kind)}
+                      </span>
+                      <span className="truncate text-lineNo">
+                        {item.model_id}
+                      </span>
+                      <span className="min-w-0 text-codeFg/85">
+                        <span className="mr-2 uppercase text-lineNo">
+                          {item.phase}
+                        </span>
+                        {preview(item.artifact)}
+                      </span>
                     </div>
                   );
                 })}
@@ -446,7 +569,9 @@ export default function LiveBattle() {
               <div className="grid h-full place-items-center text-center">
                 <div>
                   <Activity className="mx-auto h-5 w-5 text-lineNo" />
-                  <div className="mt-2 font-mono text-[9px] uppercase tracking-[0.12em] text-lineNo">Waiting for activity</div>
+                  <div className="mt-2 font-mono text-[9px] uppercase tracking-[0.12em] text-lineNo">
+                    Waiting for activity
+                  </div>
                 </div>
               </div>
             )}
@@ -456,8 +581,12 @@ export default function LiveBattle() {
         <section className="col-span-12 overflow-hidden lg:col-span-4">
           <header className="flex items-center justify-between border-b border-border px-6 py-3">
             <div>
-              <div className="font-mono text-[10px] uppercase tracking-[0.16em]">Judge</div>
-              <div className="mt-0.5 font-mono text-[9px] uppercase tracking-[0.12em] text-muted">verified scores only</div>
+              <div className="font-mono text-[10px] uppercase tracking-[0.16em]">
+                Judge
+              </div>
+              <div className="mt-0.5 font-mono text-[9px] uppercase tracking-[0.12em] text-muted">
+                verified scores only
+              </div>
             </div>
             <Trophy className="h-4 w-4 text-muted" />
           </header>
@@ -468,21 +597,37 @@ export default function LiveBattle() {
                 {Object.entries(scores)
                   .sort(([, a], [, b]) => Number(b) - Number(a))
                   .map(([model, score], index) => (
-                    <div key={model} className={`flex items-center justify-between gap-3 border-b border-border px-6 py-4 ${winner === model ? "bg-accent text-accent-fg" : ""}`}>
+                    <div
+                      key={model}
+                      className={`flex items-center justify-between gap-3 border-b border-border px-6 py-4 ${winner === model ? "bg-accent text-accent-fg" : ""}`}
+                    >
                       <div className="min-w-0">
-                        <div className="font-mono text-[9px] uppercase tracking-[0.14em] opacity-70">#{index + 1} {winner === model ? "win" : ""}</div>
-                        <div className="mt-1 truncate font-mono text-[12px]">{model}</div>
+                        <div className="font-mono text-[9px] uppercase tracking-[0.14em] opacity-70">
+                          #{index + 1} {winner === model ? "win" : ""}
+                        </div>
+                        <div className="mt-1 truncate font-mono text-[12px]">
+                          {model}
+                        </div>
                       </div>
-                      <div className="font-display text-[40px] leading-none tracking-[-0.05em]">{Number(score).toFixed(Number(score) % 1 ? 1 : 0)}</div>
+                      <div className="font-display text-[40px] leading-none tracking-[-0.05em]">
+                        {Number(score).toFixed(Number(score) % 1 ? 1 : 0)}
+                      </div>
                     </div>
                   ))}
               </div>
             ) : (
               <div className="grid h-full place-items-center px-6 text-center">
                 <div className="max-w-[240px]">
-                  <div className="font-display text-[28px] leading-none text-muted">VS</div>
-                  <div className="mt-2 font-mono text-[10px] uppercase tracking-[0.14em]">Judge pending</div>
-                  <p className="mt-2 text-[11px] leading-5 text-muted">Scores appear only when the backend emits a real judge result.</p>
+                  <div className="font-display text-[28px] leading-none text-muted">
+                    VS
+                  </div>
+                  <div className="mt-2 font-mono text-[10px] uppercase tracking-[0.14em]">
+                    Judge pending
+                  </div>
+                  <p className="mt-2 text-[11px] leading-5 text-muted">
+                    Scores appear only when the backend emits a real judge
+                    result.
+                  </p>
                 </div>
               </div>
             )}

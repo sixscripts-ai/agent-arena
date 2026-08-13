@@ -137,6 +137,7 @@ export type BattleOut = {
   round_visibility: string;
   saved: boolean;
   sandbox_id?: string;
+  preview_urls?: Record<string, string>;
 };
 
 export type ArtifactOut = { phase: string; model_id: string; artifact: string };
