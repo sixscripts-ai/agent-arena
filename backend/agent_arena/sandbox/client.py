@@ -79,6 +79,8 @@ class FakeTransport:
             return {"ok": True, "event_id": "fake", "sequence": json.get("sequence")}
         if path == "/internal/status":
             return {"status": self.battle_status}
+        if path == "/internal/finalize":
+            return {"ok": True, "status": json.get("status", "completed")}
         raise RuntimeError(f"unknown path {path}")
 
 

@@ -21,7 +21,7 @@ router = APIRouter(prefix="/internal", tags=["internal"], include_in_schema=Fals
 
 _rate_lock = Lock()
 _rate_counts: dict[str, list[float]] = defaultdict(list)
-_RATE_LIMIT = 120  # calls per battle per minute
+_RATE_LIMIT = 600  # calls per battle per minute
 
 
 def require_internal_key(x_internal_key: str | None = Header(default=None)) -> bool:
@@ -222,8 +222,9 @@ def internal_finalize(body: FinalizeBody, _ok: bool = Depends(require_internal_k
         battle = databases.get_document(database_id, "battles", body.battle_id)
     except AppwriteException as exc:
         raise HTTPException(status_code=404, detail="Battle not found") from exc
-    if battle.data.get("status") not in ("queued", "running"):
-        raise HTTPException(status_code=409, detail="battle not active")
+    current = battle.data.get("status")
+    if current in ("completed", "failed", "cancelled"):
+        return {"ok": True, "status": current, "idempotent": True}
     status = body.status if body.status in ("completed", "failed") else "completed"
     if status == "completed" and body.scores:
         try:
@@ -321,21 +322,20 @@ def internal_round(body: RoundBody, _ok: bool = Depends(require_internal_key)):
     ):
         raise HTTPException(status_code=400, detail="model not in battle")
     artifact = sanitize_artifact(body.artifact)
-    databases.create_document(
-        database_id,
-        "rounds",
-        "unique()",
-        {
-            "battle_id": body.battle_id,
-            "phase": body.phase,
-            "model_id": body.model_id,
-            "artifact": artifact,
-        },
-    )
-    event_id = f"{body.battle_id}:{body.sequence if body.sequence is not None else int(time.time() * 1000)}"
+    if body.event_type not in ("action_log", "heartbeat"):
+        databases.create_document(
+            database_id,
+            "rounds",
+            "unique()",
+            {
+                "battle_id": body.battle_id,
+                "phase": body.phase,
+                "model_id": body.model_id,
+                "artifact": artifact,
+            },
+        )
     event = {
         "type": body.event_type,
-        "event_id": event_id,
         "sequence": body.sequence,
         "data": {
             "phase": body.phase,
@@ -344,8 +344,12 @@ def internal_round(body: RoundBody, _ok: bool = Depends(require_internal_key)):
             "sequence": body.sequence,
         },
     }
-    event_bus.publish(body.battle_id, event)
-    return {"ok": True, "event_id": event_id, "sequence": body.sequence}
+    published = event_bus.publish(body.battle_id, event)
+    return {
+        "ok": True,
+        "event_id": published["event_id"],
+        "sequence": body.sequence,
+    }
 
 
 @router.post("/status")

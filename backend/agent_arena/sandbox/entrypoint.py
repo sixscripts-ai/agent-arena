@@ -5,6 +5,9 @@ from __future__ import annotations
 import json
 import os
 import sys
+import time
+
+_sleep = time.sleep
 
 
 def main(battle_id: str) -> None:
@@ -54,9 +57,18 @@ def main(battle_id: str) -> None:
         print(f"battle loop failed: {type(exc).__name__}: {exc}", file=sys.stderr)
         final = "failed"
     try:
-        client.finalize(
-            battle_id, status=final, scores=scores if final == "completed" else {}
-        )
+        for attempt in range(4):
+            try:
+                client.finalize(
+                    battle_id,
+                    status=final,
+                    scores=scores if final == "completed" else {},
+                )
+                break
+            except Exception as exc:
+                if attempt == 3:
+                    raise
+                _sleep(1)
     except Exception as exc:
         print(f"finalize({final}) failed: {type(exc).__name__}: {exc}", file=sys.stderr)
         raise

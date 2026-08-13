@@ -3,8 +3,8 @@
 from __future__ import annotations
 
 import json
+import logging
 import os
-import threading
 import time
 from pathlib import Path
 
@@ -12,6 +12,8 @@ from . import db, event_bus
 from .config import settings
 from .sandbox.client import HttpTransport, InternalClient
 from .sandbox.runner import run_battle_loop
+
+logger = logging.getLogger("agent_arena.sandbox_launcher")
 
 
 def _backend_public_url() -> str:
@@ -45,15 +47,27 @@ def _set_status(databases, database_id: str, battle_id: str, status: str) -> Non
         if status == "running":
             payload["started_at"] = time.time()
         databases.update_document(database_id, "battles", battle_id, payload)
-    except Exception:
-        pass
+    except Exception as exc:
+        logger.error("status update failed for %s -> %s: %s", battle_id, status, exc)
     event_bus.publish(battle_id, {"type": "battle_status", "data": {"status": status}})
 
 
 def run_in_process(battle_id: str) -> None:
     """Hermetic/local path: runner in this process using HttpTransport to self or Fake."""
-    databases, database_id, battle, cfg = _load_battle(battle_id)
-    key = settings().get("INTERNAL_API_KEY") or ""
+    try:
+        databases, database_id, battle, cfg = _load_battle(battle_id)
+    except Exception as exc:
+        reason = f"Worker init failed: {type(exc).__name__}: {exc}"
+        print(reason)
+        _fail_with_reason(battle_id, reason)
+        return
+    try:
+        key = settings().get("INTERNAL_API_KEY") or ""
+    except Exception as exc:
+        reason = f"Worker init failed: {type(exc).__name__}: {exc}"
+        print(reason)
+        _fail_with_reason(battle_id, reason)
+        return
     base = os.environ.get("INTERNAL_BASE_URL") or "http://127.0.0.1:8000"
     # When no server, use direct in-memory bridge via local functions
     if not key or os.environ.get("ARENA_INPROCESS_DIRECT") == "1":
@@ -218,8 +232,8 @@ def _finalize_scores(databases, database_id, battle_id, battle, scores) -> None:
         pass
 
 
-def try_spawn_modal_sandbox(battle_id: str) -> str:
-    """Spawn Modal Sandbox running the runner. Returns sandbox_id or raises."""
+def try_spawn_modal_sandbox(battle_id: str) -> tuple:
+    """Spawn Modal Sandbox running the runner. Returns (sb, model_ids) or raises."""
     try:
         import modal
     except ImportError as exc:
@@ -228,9 +242,10 @@ def try_spawn_modal_sandbox(battle_id: str) -> str:
     if not key:
         raise RuntimeError("INTERNAL_API_KEY not configured")
     databases, _database_id, battle, cfg = _load_battle(battle_id)
+    model_ids = list(battle.data["model_ids"])
     bootstrap = {
         "format_config": cfg,
-        "model_ids": list(battle.data["model_ids"]),
+        "model_ids": model_ids,
         "round_visibility": battle.data.get("round_visibility", "isolated"),
         "timeout_seconds": int(battle.data.get("timeout_seconds") or 600),
     }
@@ -273,14 +288,14 @@ def try_spawn_modal_sandbox(battle_id: str) -> str:
         encrypted_ports=[8080, 8081],
         app=app,
     )
-    sandbox_id = (
-        getattr(sb, "object_id", None) or getattr(sb, "sandbox_id", None) or str(sb)
-    )
-    if not sandbox_id:
+    return sb, model_ids
+
+
+def _sandbox_id(sb) -> str:
+    sid = getattr(sb, "object_id", None) or getattr(sb, "sandbox_id", None) or str(sb)
+    if not sid:
         raise RuntimeError("Modal sandbox created without an id")
-    # Preview tunnels: 8080 -> player_a (model_ids[0]), 8081 -> player_b (model_ids[1])
-    _persist_preview_urls(battle_id, list(battle.data["model_ids"]), sb)
-    return sandbox_id
+    return sid
 
 
 def _persist_preview_urls(battle_id: str, model_ids: list[str], sb) -> None:
@@ -316,8 +331,8 @@ def _persist_preview_urls(battle_id: str, model_ids: list[str], sb) -> None:
                 battle_id,
                 {"preview_urls": json.dumps(previews)},
             )
-        except Exception:
-            pass
+        except Exception as exc:
+            logger.error("preview_urls persist failed for %s: %s", battle_id, exc)
         for model_id, url in previews.items():
             event_bus.publish(
                 battle_id,
@@ -340,8 +355,8 @@ def _fail_with_reason(battle_id: str, reason: str) -> None:
             battle_id,
             {"status": "failed", "failure_reason": reason},
         )
-    except Exception:
-        pass
+    except Exception as exc:
+        logger.error("failed-status persist failed for %s: %s", battle_id, exc)
     event_bus.publish(battle_id, {"type": "error", "data": {"message": reason}})
     event_bus.publish(
         battle_id,
@@ -353,7 +368,8 @@ def start_battle(battle_id: str) -> None:
     """Entry used by BackgroundTasks / Modal."""
     if os.environ.get("ARENA_USE_MODAL_SANDBOX") == "1":
         try:
-            sandbox_id = try_spawn_modal_sandbox(battle_id)
+            sb, model_ids = try_spawn_modal_sandbox(battle_id)
+            sandbox_id = _sandbox_id(sb)
         except Exception as exc:
             reason = f"Sandbox spawn failed: {type(exc).__name__}: {exc}"
             print(reason)
@@ -367,9 +383,10 @@ def start_battle(battle_id: str) -> None:
                 battle_id,
                 {"sandbox_id": sandbox_id},
             )
-        except Exception:
-            pass
+        except Exception as exc:
+            logger.error("sandbox_id persist failed for %s: %s", battle_id, exc)
         _set_status(db.get_databases(), db.get_database_id(), battle_id, "running")
+        _persist_preview_urls(battle_id, model_ids, sb)
         return
     os.environ.setdefault("ARENA_INPROCESS_DIRECT", "1")
     if os.environ.get("ARENA_IN_SANDBOX") != "1":

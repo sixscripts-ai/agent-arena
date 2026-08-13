@@ -69,6 +69,7 @@ export default function LiveBattle() {
   const sessionStartedRef = useRef(Date.now());
   const statusRef = useRef(status);
   const phaseRef = useRef(phase);
+  const seenEventIdsRef = useRef(new Set<string>());
 
   useEffect(() => {
     statusRef.current = status;
@@ -126,6 +127,10 @@ export default function LiveBattle() {
   }, [jwt, id, refreshJwt]);
 
   useEffect(() => {
+    seenEventIdsRef.current = new Set();
+  }, [id]);
+
+  useEffect(() => {
     if (!jwt || !id || !user) return;
     let cancelled = false;
     const controller = new AbortController();
@@ -142,6 +147,11 @@ export default function LiveBattle() {
             const wrapped = ev.data as any;
             const data = wrapped?.data ?? wrapped;
             const d = data as any;
+            const eid = d?.event_id || wrapped?.event_id;
+            if (eid) {
+              if (seenEventIdsRef.current.has(eid)) return;
+              seenEventIdsRef.current.add(eid);
+            }
 
             if (ev.event === "battle_status" || ev.event === "done") {
               const nextStatus = d?.status || wrapped?.status;

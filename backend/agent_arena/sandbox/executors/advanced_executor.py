@@ -312,6 +312,8 @@ class ToolSession:
         self.steps = 0
         self._max_output = int(output_cap) if output_cap else None
         self.skill_reads: set[str] = set()
+        self.wrote_paths: set[str] = set()
+        self.ran_test = False
         self.seq = 0
         self.procs = ProcessManager(self.workdir)
 
@@ -348,6 +350,7 @@ class ToolSession:
             t.parent.mkdir(parents=True, exist_ok=True)
             t.write_text(content, encoding="utf-8")
             self.steps += 1
+            self.wrote_paths.add(path)
             return f"WROTE {path} {len(content)} bytes"
         except Exception as exc:
             return f"ERROR: {exc}"
@@ -459,6 +462,7 @@ class ToolSession:
         passed = rc == 0 or "TEST_PASS" in out
         fail = rc != 0 or "TEST_FAIL" in out
         self.steps += 1
+        self.ran_test = True
         if passed and rc == 0:
             return f"TEST_PASS {run_path}\n{out}"
         if fail:
@@ -758,6 +762,22 @@ class AdvancedExecutor(Executor):
             raise RuntimeError(
                 "AdvancedExecutor must run inside sandbox (ARENA_IN_SANDBOX=1)"
             )
+        from .format_runtime import run_universal_battle
+
+        return run_universal_battle(
+            self,
+            battle_id=battle_id,
+            format_config=format_config,
+            model_ids=model_ids,
+            round_visibility=round_visibility,
+            timeout_seconds=timeout_seconds,
+            role_to_model=role_to_model,
+            client=client,
+            status_check=status_check,
+            on_status=on_status,
+            deadline=deadline,
+            stop=stop,
+        )
 
         if deadline is None:
             deadline = time.time() + (timeout_seconds or 600)

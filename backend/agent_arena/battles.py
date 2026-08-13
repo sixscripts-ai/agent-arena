@@ -104,6 +104,9 @@ def create_battle(
         payload["judge_provider_id"] = body.judge_provider_id
     battle = databases.create_document(database_id, "battles", "unique()", payload)
     battle_id = battle.id
+    event_bus.publish(
+        battle_id, {"type": "battle_status", "data": {"status": "starting"}}
+    )
     # Prefer real sandbox runner; mock_runner remains for ARENA_USE_MOCK=1
     import os
 
@@ -165,6 +168,44 @@ def get_artifacts(battle_id: str, user_id: str = Depends(get_current_user)):
     ]
 
 
+_DURABLE_RELOAD_INTERVAL = 2.0
+_SSE_DRAIN_SECONDS = 2.0
+_TERMINAL = ("completed", "failed", "cancelled")
+_time = time.time
+_sleep = time.sleep
+
+
+def event_sort_key(ev: dict) -> tuple:
+    return (float(ev.get("created_at") or ev.get("ts") or 0), str(ev.get("event_id") or ""))
+
+
+def merge_new_events(local: list, durable: list, seen_ids: set[str]) -> list[dict]:
+    combined = list(durable) + list(local)
+    combined.sort(key=event_sort_key)
+    out: list[dict] = []
+    for ev in combined:
+        eid = ev.get("event_id")
+        if eid:
+            if eid in seen_ids:
+                continue
+            seen_ids.add(eid)
+        out.append(ev)
+    return out
+
+
+def sse_message(ev: dict) -> dict:
+    data = dict(ev.get("data") or {})
+    data["event_id"] = ev.get("event_id")
+    data["created_at"] = ev.get("created_at")
+    return {"event": ev.get("type") or "message", "data": json.dumps(data)}
+
+
+def _is_terminal_event(ev: dict) -> bool:
+    if ev.get("type") != "battle_status":
+        return False
+    return (ev.get("data") or {}).get("status") in _TERMINAL
+
+
 @router.get("/{battle_id}/stream")
 def stream_battle(battle_id: str, user_id: str = Depends(get_current_user)):
     databases = db.get_databases()
@@ -173,40 +214,56 @@ def stream_battle(battle_id: str, user_id: str = Depends(get_current_user)):
 
     def event_generator():
         seen_ids: set[str] = set()
-        # Durable snapshot first (survives scale-to-zero / other replicas)
-        for ev in event_bus.load_durable(battle_id):
-            eid = ev.get("event_id")
-            if eid and eid in seen_ids:
-                continue
-            if eid:
-                seen_ids.add(eid)
-            yield {"event": ev["type"], "data": json.dumps(ev.get("data", {}))}
-        while True:
-            events = event_bus.subscribe(battle_id)
-            # sort by created_at then event_id for stable multi-writer merge
-            ordered = sorted(
-                events,
-                key=lambda e: (
-                    e.get("created_at", e.get("ts", 0)),
-                    e.get("event_id", ""),
-                ),
+        watermark: float | None = None
+        watermark_id: str | None = None
+        last_durable_load = 0.0
+        last_new_durable = _time()
+
+        def _pull_durable() -> list[dict]:
+            return event_bus.load_durable(
+                battle_id,
+                after_created_at=watermark,
+                after_event_id=watermark_id,
             )
-            for ev in ordered:
-                eid = ev.get("event_id")
-                if eid and eid in seen_ids:
-                    continue
-                if eid:
-                    seen_ids.add(eid)
-                yield {"event": ev["type"], "data": json.dumps(ev.get("data", {}))}
-            battle = databases.get_document(database_id, "battles", battle_id)
-            if battle.data["status"] in ("completed", "failed", "cancelled"):
-                yield {
-                    "event": "done",
-                    "data": json.dumps({"status": battle.data["status"]}),
-                }
-                return
+
+        while True:
+            durable: list[dict] = []
+            durable_ok = True
+            now = _time()
+            if now - last_durable_load >= _DURABLE_RELOAD_INTERVAL or watermark is None:
+                last_durable_load = now
+                try:
+                    durable = _pull_durable()
+                except event_bus.DurableReadError:
+                    durable_ok = False
+                    yield {"event": "heartbeat", "data": json.dumps({"error": "durable_read"})}
+            local = event_bus.subscribe(battle_id)
+            new_events = merge_new_events(local, durable, seen_ids)
+            for ev in new_events:
+                if durable_ok and ev in durable:
+                    last_new_durable = _time()
+                ts = float(ev.get("created_at") or 0)
+                eid = ev.get("event_id") or ""
+                if watermark is None or ts > watermark or (ts == watermark and eid > (watermark_id or "")):
+                    watermark = ts
+                    watermark_id = eid
+                yield sse_message(ev)
+            try:
+                battle = databases.get_document(database_id, "battles", battle_id)
+                status = battle.data["status"]
+            except Exception:
+                yield {"event": "heartbeat", "data": "{}"}
+                _sleep(1)
+                continue
+            if status in _TERMINAL:
+                if _time() - last_new_durable >= _SSE_DRAIN_SECONDS:
+                    yield {
+                        "event": "done",
+                        "data": json.dumps({"status": status}),
+                    }
+                    return
             yield {"event": "heartbeat", "data": "{}"}
-            time.sleep(1)
+            _sleep(1)
 
     return EventSourceResponse(event_generator())
 
