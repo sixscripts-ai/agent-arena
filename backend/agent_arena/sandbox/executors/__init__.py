@@ -19,20 +19,19 @@ _ENGINE_REGISTRY = {
 
 
 def get_executor(engine_or_config):
-    """Resolve by format name/slug, then engine. Accepts a config dict or engine string."""
+    """Resolve executor. Config dicts use AdvancedExecutor unless universal is False."""
     if isinstance(engine_or_config, str):
         return _ENGINE_REGISTRY.get(engine_or_config, ScriptedExecutor)()
     cfg = engine_or_config or {}
-    name = cfg.get("name") or ""
-    cls = FORMAT_EXECUTORS.get(name)
-    if cls is not None:
-        return cls()
-    slug = cfg.get("id") or cfg.get("slug") or ""
-    cls = FORMAT_EXECUTORS.get(slug)
-    if cls is not None:
-        return cls()
-    # A format opts into the universal toolbelt engine with `universal: true`
-    if cfg.get("universal"):
-        return AdvancedExecutor()
-    engine = cfg.get("engine", "scripted")
-    return _ENGINE_REGISTRY.get(engine, ScriptedExecutor)()
+    if cfg.get("universal") is False:
+        name = cfg.get("name") or ""
+        cls = FORMAT_EXECUTORS.get(name)
+        if cls is not None:
+            return cls()
+        slug = cfg.get("id") or cfg.get("slug") or ""
+        cls = FORMAT_EXECUTORS.get(slug)
+        if cls is not None:
+            return cls()
+        engine = cfg.get("engine", "scripted")
+        return _ENGINE_REGISTRY.get(engine, ScriptedExecutor)()
+    return AdvancedExecutor()

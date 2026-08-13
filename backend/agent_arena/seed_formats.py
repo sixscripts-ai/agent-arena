@@ -361,6 +361,144 @@ def _slugify(name: str) -> str:
     return re.sub(r"[^a-z0-9]+", "-", name.lower()).strip("-")[:36]
 
 
+_DEFAULT_TARGET = (
+    "# TASK: Implement solution.py for this format's mission.\n"
+    "def solve(payload: str) -> str:\n"
+    "    return payload\n"
+)
+
+_DEFAULT_TEST = (
+    "from solution import solve\n"
+    "\n"
+    "def main() -> None:\n"
+    "    assert solve('ok') == 'ok'\n"
+    "    print('TEST_PASS')\n"
+    "\n"
+    "if __name__ == '__main__':\n"
+    "    main()\n"
+)
+
+_ENGINE_MISSIONS = {
+    "build_and_break": {
+        "builder": "Build a working implementation of the objective. Write real files, install deps if needed, and make tests/test_target.py pass.",
+        "breaker": "Inspect OPPONENT/ for the builder's artifact. Bypass, break, or exploit it with real file changes and tests.",
+    },
+    "script_vs_defense": {
+        "attacker": "Craft a working attack against TARGET.md. Write exploit code, run it, and prove impact with tests.",
+        "defender": "Inspect OPPONENT/ and TARGET.md. Harden the system so the attack fails while legitimate behavior still passes tests.",
+    },
+    "same_target_race": {
+        "player_a": "Fix the shared TARGET independently. Write files, run tests, iterate until tests/test_target.py passes.",
+        "player_b": "Fix the shared TARGET independently. Write files, run tests, iterate until tests/test_target.py passes.",
+    },
+    "direct_duel": {
+        "player_a": "Execute the offensive side of this duel with real code, tools, and tests.",
+        "player_b": "Execute the defensive side of this duel with real code, tools, and tests.",
+    },
+    "high_complexity": {
+        "player_a": "Lead this multi-phase system: write real modules, keep tests green, and adapt when the opponent moves.",
+        "player_b": "Counter and extend the evolving system with real file changes, tests, and iteration.",
+    },
+    "agent_vs_agent": {
+        "agent_a": "You are the attacking agent. Compromise or inject against the target using real tools and files.",
+        "agent_b": "You are the hardened agent. Sanitize, reject attacks, and keep the target correct with real tools and files.",
+    },
+    "agent_tool_race": {
+        "player_a": "Fix the shared TARGET so tests/test_target.py passes. Load skills, write THEORY.md, iterate with tools.",
+        "player_b": "Fix the shared TARGET so tests/test_target.py passes. Load skills, write THEORY.md, iterate with tools.",
+    },
+}
+
+_NAMED_MISSIONS = {
+    "Injection agent vs hardened agent": {
+        "agent_a": (
+            "You are the injection agent. Compromise the notes app via unsanitized input. "
+            "Write exploit.py (and any helpers), prove injection with tests, document the payload in THEORY.md."
+        ),
+        "agent_b": (
+            "You are the hardened agent. Sanitize all user input, reject injection payloads, "
+            "and keep legitimate notes working. Write app.py plus tests proving hygiene."
+        ),
+    },
+}
+
+_INJECTION_TARGET = (
+    "# Vulnerable notes service. Agents must inspect and modify this workspace.\n"
+    "NOTES: list[str] = []\n"
+    "\n"
+    "def add_note(text: str) -> str:\n"
+    "    NOTES.append(text)\n"
+    "    return 'ok'\n"
+    "\n"
+    "def render() -> str:\n"
+    "    return '\\n'.join(NOTES)\n"
+)
+
+_INJECTION_TEST = (
+    "import solution\n"
+    "\n"
+    "def main() -> None:\n"
+    "    solution.NOTES.clear()\n"
+    "    assert solution.add_note('hello') == 'ok'\n"
+    "    assert 'hello' in solution.render()\n"
+    "    print('TEST_PASS')\n"
+    "\n"
+    "if __name__ == '__main__':\n"
+    "    main()\n"
+)
+
+
+def _universal_extra(name: str, engine: str, description: str) -> dict:
+    roles = [r for r in ENGINE_TEMPLATES[engine]["roles"] if r != "judge"]
+    missions = dict(_ENGINE_MISSIONS.get(engine) or {})
+    missions.update(_NAMED_MISSIONS.get(name) or {})
+    for role in roles:
+        missions.setdefault(role, f"You are {role} in {name}. {description}")
+    preview = engine in {"build_and_break", "agent_vs_agent", "high_complexity"}
+    extra = {
+        "role_missions": missions,
+        "objectives": [description, "Use the full toolbelt: inspect, edit files, run tests, iterate."],
+        "recommended_skills": [
+            "python-kata-fixer",
+            "secure-code-execution",
+            "sandbox-runtime-engineer",
+        ],
+        "environment": {
+            "languages": ["python3", "bash"],
+            "preview": preview,
+            "network": True,
+        },
+        "max_tool_turns": 6,
+        "max_tool_steps": 14,
+        "tool_timeout": None,
+        "exec_timeout_seconds": 240,
+        "race_max_tokens": 4096,
+        "pick_per_battle": 3,
+        "share_opponent": engine in {"agent_vs_agent", "script_vs_defense", "build_and_break"},
+        "outcome_markers": ["DONE", "TEST_PASS", "TEST_FAIL", "STEP_BUDGET_EXCEEDED"],
+        "artifacts": {"required": ["solution.py"], "expected": ["THEORY.md"]},
+        "target_code": _DEFAULT_TARGET,
+        "test_code": _DEFAULT_TEST,
+        "limits": {
+            "max_tool_turns": 6,
+            "max_tool_steps": 14,
+            "tool_timeout": None,
+            "exec_timeout_seconds": 240,
+            "race_max_tokens": 4096,
+        },
+        "scoring": {
+            "weights": {"tests": 0.6, "skills": 0.2, "theory": 0.2},
+            "outcome_markers": ["DONE", "TEST_PASS", "TEST_FAIL", "STEP_BUDGET_EXCEEDED"],
+        },
+    }
+    if name == "Injection agent vs hardened agent":
+        extra["target_code"] = _INJECTION_TARGET
+        extra["test_code"] = _INJECTION_TEST
+        extra["environment"] = {**extra["environment"], "preview": True}
+        extra["share_opponent"] = True
+    return extra
+
+
 def build_format(
     name: str, engine: str, description: str, extra: dict | None = None
 ) -> dict:
@@ -378,6 +516,7 @@ def build_format(
         "judge_rubric": RUBRICS[engine],
         "scoring_weights": template["scoring_weights"],
     }
+    cfg.update(_universal_extra(name, engine, description))
     if extra:
         cfg.update(extra)
     return cfg

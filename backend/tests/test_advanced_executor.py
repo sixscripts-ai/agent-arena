@@ -206,3 +206,206 @@ def test_extract_on_py_write(tmp_path):
     text = sess.read("solution.py")
     assert "Here is the code" not in text
     assert "def is_palindrome" in text
+
+
+PALINDROME_TOOLS = (
+    "SKILLS: python-kata-fixer\n"
+    "TOOL read path=.agents/skills/python-kata-fixer/SKILL.md\n"
+    "TOOL write path=solution.py\n"
+    "def is_palindrome(s: str) -> bool:\n"
+    "    n = ''.join(c.lower() for c in s if c.isalnum())\n"
+    "    return n == n[::-1]\n"
+    "END_TOOL\n"
+    "TOOL write path=THEORY.md\n"
+    "Used python-kata-fixer.\n"
+    "END_TOOL\n"
+    "TOOL test\n"
+    "DONE\n"
+)
+
+
+def _run_cfg(monkeypatch, cfg, roles_to_ids):
+    from agent_arena.sandbox.client import FakeTransport, InternalClient
+
+    monkeypatch.setenv("ARENA_IN_SANDBOX", "1")
+    transport = FakeTransport()
+    mids = list(roles_to_ids.values())
+    transport.model_replies = {mid: PALINDROME_TOOLS for mid in mids}
+    transport.judge_result = {
+        "scores": {mid: 80.0 + i for i, mid in enumerate(mids)},
+        "justifications": {mid: "ok" for mid in mids},
+        "judge_model": "mock",
+    }
+    client = InternalClient(transport)
+    ex = AE()
+    scores = ex.run_battle(
+        battle_id="b-univ",
+        format_config=cfg,
+        model_ids=mids,
+        round_visibility="isolated",
+        timeout_seconds=60,
+        role_to_model=roles_to_ids,
+        client=client,
+    )
+    return transport, scores
+
+
+def test_all_seeded_formats_resolve_to_advanced():
+    from agent_arena.seed_formats import ALL_FORMATS
+
+    assert len(ALL_FORMATS) == 26
+    for cfg in ALL_FORMATS:
+        assert isinstance(get_executor(cfg), AE), cfg["name"]
+
+
+def test_injection_format_is_advanced_not_notes_sim():
+    from agent_arena.seed_formats import ALL_FORMATS
+    from agent_arena.sandbox.executors.agent_vs_agent import AgentVsAgentExecutor
+
+    cfg = next(f for f in ALL_FORMATS if f["name"] == "Injection agent vs hardened agent")
+    assert isinstance(get_executor(cfg), AE)
+    legacy = get_executor({**cfg, "universal": False})
+    assert isinstance(legacy, AgentVsAgentExecutor)
+
+
+def test_universal_false_keeps_legacy_engine():
+    from agent_arena.sandbox.executors.build_and_break import BuildAndBreakExecutor
+
+    cfg = {"name": "WAF builder vs bypasser", "engine": "build_and_break", "universal": False}
+    assert isinstance(get_executor(cfg), BuildAndBreakExecutor)
+
+
+def test_build_and_break_behavioral(monkeypatch):
+    cfg = {
+        "name": "WAF builder vs bypasser",
+        "engine": "build_and_break",
+        "roles": ["builder", "breaker", "judge"],
+        "phases": [
+            {"name": "build", "participants": ["builder"], "inputs": []},
+            {"name": "break", "participants": ["breaker"], "inputs": ["build"]},
+        ],
+        "role_missions": {"builder": "Build a WAF", "breaker": "Bypass the WAF"},
+        "max_tool_turns": 2,
+        "max_tool_steps": 20,
+        "pick_per_battle": 1,
+    }
+    transport, scores = _run_cfg(monkeypatch, cfg, {"builder": "m-build", "breaker": "m-break"})
+    prompts = " ".join(
+        str(body.get("messages")) for path, body in transport.calls if path == "/internal/model"
+    )
+    assert "Build a WAF" in prompts
+    assert "Bypass the WAF" in prompts
+    assert "WAF builder vs bypasser" in prompts
+    assert scores["m-build"] >= 80
+    arts = " ".join(r.get("artifact", "") for r in transport.rounds)
+    assert "python-kata-fixer" in arts
+    assert any(r.get("event_type") == "action_log" for r in transport.rounds)
+
+
+def test_attacker_vs_defender_behavioral(monkeypatch):
+    cfg = {
+        "name": "Reverse shell vs network defense",
+        "engine": "script_vs_defense",
+        "roles": ["attacker", "defender", "judge"],
+        "phases": [
+            {"name": "script", "participants": ["attacker"], "inputs": []},
+            {"name": "defend", "participants": ["defender"], "inputs": ["script"]},
+        ],
+        "role_missions": {
+            "attacker": "Craft the reverse shell",
+            "defender": "Harden the network",
+        },
+        "share_opponent": True,
+        "max_tool_turns": 2,
+        "max_tool_steps": 20,
+        "pick_per_battle": 1,
+    }
+    transport, _scores = _run_cfg(
+        monkeypatch, cfg, {"attacker": "m-att", "defender": "m-def"}
+    )
+    prompts = " ".join(
+        str(body.get("messages")) for path, body in transport.calls if path == "/internal/model"
+    )
+    assert "Craft the reverse shell" in prompts
+    assert "Harden the network" in prompts
+
+
+def test_same_target_race_behavioral(monkeypatch):
+    cfg = {
+        "name": "Debugging race",
+        "engine": "same_target_race",
+        "roles": ["player_a", "player_b", "judge"],
+        "phases": [{"name": "race", "participants": ["player_a", "player_b"], "inputs": []}],
+        "role_missions": {
+            "player_a": "Fix the shared bug first",
+            "player_b": "Fix the shared bug independently",
+        },
+        "max_tool_turns": 2,
+        "max_tool_steps": 20,
+        "pick_per_battle": 1,
+    }
+    transport, _scores = _run_cfg(monkeypatch, cfg, {"player_a": "a", "player_b": "b"})
+    prompts = " ".join(
+        str(body.get("messages")) for path, body in transport.calls if path == "/internal/model"
+    )
+    assert "Fix the shared bug first" in prompts
+    assert "Fix the shared bug independently" in prompts
+
+
+def test_direct_duel_behavioral(monkeypatch):
+    cfg = {
+        "name": "Prompt injection vs hygiene",
+        "engine": "direct_duel",
+        "roles": ["player_a", "player_b", "judge"],
+        "phases": [{"name": "duel", "participants": ["player_a", "player_b"], "inputs": []}],
+        "role_missions": {
+            "player_a": "Inject against the prompt",
+            "player_b": "Hold the guardrail",
+        },
+        "max_tool_turns": 2,
+        "max_tool_steps": 20,
+        "pick_per_battle": 1,
+    }
+    transport, _scores = _run_cfg(monkeypatch, cfg, {"player_a": "inj", "player_b": "hyg"})
+    prompts = " ".join(
+        str(body.get("messages")) for path, body in transport.calls if path == "/internal/model"
+    )
+    assert "Inject against the prompt" in prompts
+    assert "Hold the guardrail" in prompts
+    assert "Prompt injection vs hygiene" in prompts
+
+
+def test_prose_does_not_count_as_success(monkeypatch):
+    from agent_arena.sandbox.client import FakeTransport, InternalClient
+
+    monkeypatch.setenv("ARENA_IN_SANDBOX", "1")
+    transport = FakeTransport()
+    transport.model_replies = {"a": "I hereby solve the task in prose.", "b": "Me too."}
+    transport.judge_result = {
+        "scores": {"a": 10.0, "b": 10.0},
+        "justifications": {"a": "x", "b": "y"},
+        "judge_model": "mock",
+    }
+    client = InternalClient(transport)
+    ex = AE()
+    ex.run_battle(
+        battle_id="prose",
+        format_config={
+            "name": "Debugging race",
+            "engine": "same_target_race",
+            "roles": ["player_a", "player_b", "judge"],
+            "phases": [{"name": "race", "participants": ["player_a", "player_b"]}],
+            "max_tool_turns": 2,
+            "max_tool_steps": 8,
+            "pick_per_battle": 1,
+        },
+        model_ids=["a", "b"],
+        round_visibility="isolated",
+        timeout_seconds=30,
+        role_to_model={"player_a": "a", "player_b": "b"},
+        client=client,
+    )
+    logs = " ".join(r.get("artifact", "") for r in transport.rounds)
+    assert "No TOOL calls" in logs or "nudge" in logs.lower()
+    assert "passed=False" in logs or "TEST_FAIL" in logs
+

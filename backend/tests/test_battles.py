@@ -19,18 +19,22 @@ def _stub_leaderboard(monkeypatch):
     if spec is not None:
         return
     stub = ModuleType("agent_arena.leaderboard")
-    stub.apply_result = lambda databases, database_id, format_id, model_ids, scores: None
+    stub.apply_result = lambda databases, database_id, format_id, model_ids, scores: (
+        None
+    )
     monkeypatch.setitem(sys.modules, "agent_arena.leaderboard", stub)
 
 
 def _login(client, user_id):
     from agent_arena.auth import get_current_user
     from agent_arena.main import app
+
     app.dependency_overrides[get_current_user] = lambda: user_id
 
 
 def _logout():
     from agent_arena.main import app
+
     app.dependency_overrides.clear()
 
 
@@ -48,14 +52,17 @@ def test_create_battle_wrong_role_count(client):
     user_id = make_user_id()
     _login(client, user_id)
     try:
-        resp = client.post("/battles", json={
-            "format_id": _real_format_id(),
-            "model_ids": ["host:openrouter-free"],  # need 2 playable roles
-            "arena_size": 1,
-            "timeout_seconds": 600,
-            "round_visibility": "isolated",
-            "save": False,
-        })
+        resp = client.post(
+            "/battles",
+            json={
+                "format_id": _real_format_id(),
+                "model_ids": ["host:openrouter-free"],  # need 2 playable roles
+                "arena_size": 1,
+                "timeout_seconds": 600,
+                "round_visibility": "isolated",
+                "save": False,
+            },
+        )
         # pydantic min_length=2 on model_ids → 422, or our 400 if that changes
         assert resp.status_code in (400, 422)
     finally:
@@ -67,14 +74,17 @@ def test_create_battle_rejects_unknown_model(client):
     user_id = make_user_id()
     _login(client, user_id)
     try:
-        resp = client.post("/battles", json={
-            "format_id": _real_format_id(),
-            "model_ids": ["host:openrouter-free", "not-a-real-provider-id"],
-            "arena_size": 2,
-            "timeout_seconds": 600,
-            "round_visibility": "isolated",
-            "save": False,
-        })
+        resp = client.post(
+            "/battles",
+            json={
+                "format_id": _real_format_id(),
+                "model_ids": ["host:openrouter-free", "not-a-real-provider-id"],
+                "arena_size": 2,
+                "timeout_seconds": 600,
+                "round_visibility": "isolated",
+                "save": False,
+            },
+        )
         assert resp.status_code == 400
         assert "Unknown model_id" in resp.text or "model_id" in resp.text
     finally:
@@ -86,14 +96,17 @@ def test_cancel_stops_battle(client):
     user_id = make_user_id()
     _login(client, user_id)
     try:
-        battle = client.post("/battles", json={
-            "format_id": _real_format_id(),
-            "model_ids": ["host:openrouter-free", "host:openrouter-free"],
-            "arena_size": 2,
-            "timeout_seconds": 600,
-            "round_visibility": "isolated",
-            "save": False,
-        }).json()
+        battle = client.post(
+            "/battles",
+            json={
+                "format_id": _real_format_id(),
+                "model_ids": ["host:openrouter-free", "host:openrouter-free"],
+                "arena_size": 2,
+                "timeout_seconds": 600,
+                "round_visibility": "isolated",
+                "save": False,
+            },
+        ).json()
         cancel = client.post(f"/battles/{battle['id']}/cancel")
         assert cancel.status_code == 200
         assert cancel.json()["status"] == "cancelled"
@@ -106,22 +119,28 @@ def test_list_battles_saved_filter(client):
     user_id = make_user_id()
     _login(client, user_id)
     try:
-        unsaved = client.post("/battles", json={
-            "format_id": _real_format_id(),
-            "model_ids": ["host:openrouter-free", "host:openrouter-free"],
-            "arena_size": 2,
-            "timeout_seconds": 600,
-            "round_visibility": "isolated",
-            "save": False,
-        }).json()
-        saved = client.post("/battles", json={
-            "format_id": _real_format_id(),
-            "model_ids": ["host:openrouter-free", "host:openrouter-free"],
-            "arena_size": 2,
-            "timeout_seconds": 600,
-            "round_visibility": "isolated",
-            "save": True,
-        }).json()
+        unsaved = client.post(
+            "/battles",
+            json={
+                "format_id": _real_format_id(),
+                "model_ids": ["host:openrouter-free", "host:openrouter-free"],
+                "arena_size": 2,
+                "timeout_seconds": 600,
+                "round_visibility": "isolated",
+                "save": False,
+            },
+        ).json()
+        saved = client.post(
+            "/battles",
+            json={
+                "format_id": _real_format_id(),
+                "model_ids": ["host:openrouter-free", "host:openrouter-free"],
+                "arena_size": 2,
+                "timeout_seconds": 600,
+                "round_visibility": "isolated",
+                "save": True,
+            },
+        ).json()
         all_battles = client.get("/battles")
         assert all_battles.status_code == 200
         ids = {b["id"] for b in all_battles.json()}
@@ -140,14 +159,17 @@ def test_save_persists_rounds(client):
     user_id = make_user_id()
     _login(client, user_id)
     try:
-        battle = client.post("/battles", json={
-            "format_id": _real_format_id(),
-            "model_ids": ["host:openrouter-free", "host:openrouter-free"],
-            "arena_size": 2,
-            "timeout_seconds": 600,
-            "round_visibility": "isolated",
-            "save": False,
-        }).json()
+        battle = client.post(
+            "/battles",
+            json={
+                "format_id": _real_format_id(),
+                "model_ids": ["host:openrouter-free", "host:openrouter-free"],
+                "arena_size": 2,
+                "timeout_seconds": 600,
+                "round_visibility": "isolated",
+                "save": False,
+            },
+        ).json()
         # mock runner completes in background after create returns
         for _ in range(50):
             status = client.get(f"/battles/{battle['id']}").json()["status"]
@@ -169,14 +191,17 @@ def test_unsaved_battle_has_no_artifacts(client):
     user_id = make_user_id()
     _login(client, user_id)
     try:
-        battle = client.post("/battles", json={
-            "format_id": _real_format_id(),
-            "model_ids": ["host:openrouter-free", "host:openrouter-free"],
-            "arena_size": 2,
-            "timeout_seconds": 600,
-            "round_visibility": "isolated",
-            "save": False,
-        }).json()
+        battle = client.post(
+            "/battles",
+            json={
+                "format_id": _real_format_id(),
+                "model_ids": ["host:openrouter-free", "host:openrouter-free"],
+                "arena_size": 2,
+                "timeout_seconds": 600,
+                "round_visibility": "isolated",
+                "save": False,
+            },
+        ).json()
         for _ in range(50):
             status = client.get(f"/battles/{battle['id']}").json()["status"]
             if status == "completed":
@@ -199,14 +224,17 @@ def test_runner_failure_marks_battle_failed(client, monkeypatch):
     user_id = make_user_id()
     _login(client, user_id)
     try:
-        battle = client.post("/battles", json={
-            "format_id": _real_format_id(),
-            "model_ids": ["host:openrouter-free", "host:openrouter-free"],
-            "arena_size": 2,
-            "timeout_seconds": 600,
-            "round_visibility": "isolated",
-            "save": False,
-        })
+        battle = client.post(
+            "/battles",
+            json={
+                "format_id": _real_format_id(),
+                "model_ids": ["host:openrouter-free", "host:openrouter-free"],
+                "arena_size": 2,
+                "timeout_seconds": 600,
+                "round_visibility": "isolated",
+                "save": False,
+            },
+        )
         assert battle.status_code == 201
         # run_battle runs as a background task; the failure path must flip the
         # battle to "failed" (not leave it stuck in queued/running forever).
@@ -217,19 +245,112 @@ def test_runner_failure_marks_battle_failed(client, monkeypatch):
 
 
 @requires_appwrite
+def test_worker_init_failure_marks_battle_failed(client, monkeypatch):
+    """Worker init failure (e.g. battle/format load) must mark the battle failed
+    with a reason + error events, not leave it queued with zero events."""
+    from agent_arena import sandbox_launcher
+    from agent_arena import event_bus
+    from agent_arena.auth import get_current_user
+    from agent_arena.main import app
+
+    def boom(*args, **kwargs):
+        raise RuntimeError("simulated init failure")
+
+    monkeypatch.setattr(sandbox_launcher, "_load_battle", boom)
+    monkeypatch.setenv("ARENA_USE_MODAL_SANDBOX", "")  # force in-process path
+    user_id = make_user_id()
+    _login(client, user_id)
+    try:
+        battle = client.post(
+            "/battles",
+            json={
+                "format_id": _real_format_id(),
+                "model_ids": ["host:openrouter-free", "host:openrouter-free"],
+                "arena_size": 2,
+                "timeout_seconds": 600,
+                "round_visibility": "isolated",
+                "save": False,
+            },
+        ).json()
+        battle_id = battle["id"]
+        # Force the real (non-mock) worker path directly; mock runner may not run.
+        app.dependency_overrides[get_current_user] = lambda: user_id
+        sandbox_launcher.start_battle(battle_id)
+        doc = client.get(f"/battles/{battle_id}").json()
+        assert doc["status"] == "failed"
+        assert "Worker init failed" in doc.get("failure_reason", "")
+        types = [e["type"] for e in event_bus.subscribe(battle_id)]
+        assert "error" in types
+        assert "battle_status" in types
+    finally:
+        _logout()
+
+
+@requires_appwrite
+def test_start_battle_publishes_running_before_tunnel_discovery(client, monkeypatch):
+    """running status must be published immediately; tunnel discovery runs
+    after status publication on the same worker (no daemon thread)."""
+    from agent_arena import sandbox_launcher
+    from agent_arena import event_bus
+
+    class _FakeSB:
+        object_id = "fake-sb-1"
+
+    monkeypatch.setenv("ARENA_USE_MODAL_SANDBOX", "1")
+    monkeypatch.setattr(
+        sandbox_launcher,
+        "try_spawn_modal_sandbox",
+        lambda battle_id: (
+            _FakeSB(),
+            ["host:openrouter-free", "host:openrouter-free"],
+        ),
+    )
+    # Tunnel discovery must not delay status publication.
+    monkeypatch.setattr(sandbox_launcher, "_persist_preview_urls", lambda *a, **k: None)
+
+    user_id = make_user_id()
+    _login(client, user_id)
+    try:
+        battle = client.post(
+            "/battles",
+            json={
+                "format_id": _real_format_id(),
+                "model_ids": ["host:openrouter-free", "host:openrouter-free"],
+                "arena_size": 2,
+                "timeout_seconds": 600,
+                "round_visibility": "isolated",
+                "save": False,
+            },
+        ).json()
+        battle_id = battle["id"]
+        sandbox_launcher.start_battle(battle_id)
+        doc = client.get(f"/battles/{battle_id}").json()
+        assert doc["status"] == "running"
+        assert doc.get("sandbox_id") == "fake-sb-1"
+        types = [e["type"] for e in event_bus.subscribe(battle_id)]
+        assert "battle_status" in types
+    finally:
+        _logout()
+        monkeypatch.delenv("ARENA_USE_MODAL_SANDBOX")
+
+
+@requires_appwrite
 def test_other_user_cannot_act_on_battle(client):
     owner = make_user_id()
     attacker = make_user_id()
     _login(client, owner)
     try:
-        battle = client.post("/battles", json={
-            "format_id": _real_format_id(),
-            "model_ids": ["host:openrouter-free", "host:openrouter-free"],
-            "arena_size": 2,
-            "timeout_seconds": 600,
-            "round_visibility": "isolated",
-            "save": False,
-        }).json()
+        battle = client.post(
+            "/battles",
+            json={
+                "format_id": _real_format_id(),
+                "model_ids": ["host:openrouter-free", "host:openrouter-free"],
+                "arena_size": 2,
+                "timeout_seconds": 600,
+                "round_visibility": "isolated",
+                "save": False,
+            },
+        ).json()
     finally:
         _logout()
     _login(client, attacker)

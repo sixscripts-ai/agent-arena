@@ -1,4 +1,5 @@
 """Real Modal sandbox smoke — skipped by default (pytest -m modal)."""
+
 import os
 
 import pytest

@@ -39,6 +39,7 @@ def test_run_battle_loop_direct_duel():
         ],
         "judge_rubric": "Score 0-100",
         "scoring_weights": {"duel": 1.0},
+        "universal": False,
         "duel_turns": 1,
     }
     statuses = []
@@ -66,6 +67,7 @@ def test_run_battle_loop_cancelled():
         "engine": "scripted",
         "roles": ["a", "b", "judge"],
         "phases": [{"name": "p", "participants": ["a", "b"]}],
+        "universal": False,
         "judge_rubric": "r",
     }
     scores = run_battle_loop(

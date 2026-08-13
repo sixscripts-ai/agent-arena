@@ -48,6 +48,15 @@ function eventLabel(kind?: string): string {
   if (kind === "action_log") return "TOOL";
   if (kind === "transcript") return "OUTPUT";
   if (kind === "artifact") return "ARTIFACT";
+  if (kind === "runtime_selected") return "RUNTIME";
+  if (kind === "participant_start") return "START";
+  if (kind === "participant_failed") return "FAILED";
+  if (kind === "participant_completed") return "DONE";
+  if (kind === "model_request") return "REQUEST";
+  if (kind === "model_response") return "MODEL";
+  if (kind === "tool_start") return "TOOL▶";
+  if (kind === "tool_result") return "RESULT";
+  if (kind === "error") return "ERROR";
   return (kind || "EVENT").toUpperCase();
 }
 
@@ -69,6 +78,7 @@ export default function LiveBattle() {
   const sessionStartedRef = useRef(Date.now());
   const statusRef = useRef(status);
   const phaseRef = useRef(phase);
+  const seenEventIdsRef = useRef(new Set<string>());
 
   useEffect(() => {
     statusRef.current = status;
@@ -126,6 +136,10 @@ export default function LiveBattle() {
   }, [jwt, id, refreshJwt]);
 
   useEffect(() => {
+    seenEventIdsRef.current = new Set();
+  }, [id]);
+
+  useEffect(() => {
     if (!jwt || !id || !user) return;
     let cancelled = false;
     const controller = new AbortController();
@@ -142,6 +156,11 @@ export default function LiveBattle() {
             const wrapped = ev.data as any;
             const data = wrapped?.data ?? wrapped;
             const d = data as any;
+            const eid = d?.event_id || wrapped?.event_id;
+            if (eid) {
+              if (seenEventIdsRef.current.has(eid)) return;
+              seenEventIdsRef.current.add(eid);
+            }
 
             if (ev.event === "battle_status" || ev.event === "done") {
               const nextStatus = d?.status || wrapped?.status;
@@ -159,7 +178,22 @@ export default function LiveBattle() {
               }
             }
 
-            if (["artifact", "transcript", "action_log"].includes(ev.event)) {
+            if (
+              [
+                "artifact",
+                "transcript",
+                "action_log",
+                "runtime_selected",
+                "participant_start",
+                "participant_failed",
+                "participant_completed",
+                "model_request",
+                "model_response",
+                "tool_start",
+                "tool_result",
+                "error",
+              ].includes(ev.event)
+            ) {
               const artifact =
                 d?.artifact ??
                 wrapped?.artifact ??

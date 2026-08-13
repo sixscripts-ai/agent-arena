@@ -5,6 +5,9 @@ from __future__ import annotations
 import json
 import os
 import sys
+import time
+
+_sleep = time.sleep
 
 
 def main(battle_id: str) -> None:
@@ -22,6 +25,7 @@ def main(battle_id: str) -> None:
     client = InternalClient(HttpTransport(base, key))
     terminal: list[str] = []
     scores: dict = {}
+    reason: str | None = None
 
     def status_check() -> str:
         try:
@@ -50,13 +54,32 @@ def main(battle_id: str) -> None:
             on_status=on_status,
         )
         final = "completed" if scores else "failed"
+        if not scores:
+            reason = "executor returned no scores"
     except Exception as exc:
-        print(f"battle loop failed: {type(exc).__name__}: {exc}", file=sys.stderr)
+        reason = f"{type(exc).__name__}: {exc}"[:2000]
+        print(f"battle loop failed: {reason}", file=sys.stderr)
+        try:
+            client.round(
+                battle_id, "system", "system", reason, event_type="error"
+            )
+        except Exception as pub_exc:
+            print(f"error event publish failed: {pub_exc}", file=sys.stderr)
         final = "failed"
     try:
-        client.finalize(
-            battle_id, status=final, scores=scores if final == "completed" else {}
-        )
+        for attempt in range(4):
+            try:
+                client.finalize(
+                    battle_id,
+                    status=final,
+                    scores=scores if final == "completed" else {},
+                    failure_reason=reason,
+                )
+                break
+            except Exception as exc:
+                if attempt == 3:
+                    raise
+                _sleep(1)
     except Exception as exc:
         print(f"finalize({final}) failed: {type(exc).__name__}: {exc}", file=sys.stderr)
         raise

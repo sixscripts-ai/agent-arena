@@ -148,6 +148,8 @@ _ARG_TOOLS = {
     "logs",
     "use_skill",
     "skills",
+    "patch",
+    "preview",
 }
 
 
@@ -280,6 +282,16 @@ def parse_tool_calls(text: str) -> list[dict[str, Any]]:
                 call["name"] = _extract_arg(arg_str, "name") or _first_positional(
                     arg_str
                 )
+            elif tool_name == "patch":
+                call["path"] = _extract_path(arg_str)
+                call["old_string"] = _extract_arg(arg_str, "old_string") or _extract_arg(
+                    arg_str, "old"
+                )
+                call["new_string"] = _extract_arg(arg_str, "new_string") or _extract_arg(
+                    arg_str, "new"
+                )
+            elif tool_name == "preview":
+                call["url"] = _extract_arg(arg_str, "url") or _first_positional(arg_str)
             elif tool_name == "test":
                 call["path"] = _extract_path(arg_str)
             calls.append(call)
@@ -312,6 +324,8 @@ class ToolSession:
         self.steps = 0
         self._max_output = int(output_cap) if output_cap else None
         self.skill_reads: set[str] = set()
+        self.wrote_paths: set[str] = set()
+        self.ran_test = False
         self.seq = 0
         self.procs = ProcessManager(self.workdir)
 
@@ -348,6 +362,7 @@ class ToolSession:
             t.parent.mkdir(parents=True, exist_ok=True)
             t.write_text(content, encoding="utf-8")
             self.steps += 1
+            self.wrote_paths.add(path)
             return f"WROTE {path} {len(content)} bytes"
         except Exception as exc:
             return f"ERROR: {exc}"
@@ -459,6 +474,7 @@ class ToolSession:
         passed = rc == 0 or "TEST_PASS" in out
         fail = rc != 0 or "TEST_FAIL" in out
         self.steps += 1
+        self.ran_test = True
         if passed and rc == 0:
             return f"TEST_PASS {run_path}\n{out}"
         if fail:
@@ -678,10 +694,50 @@ class ToolSession:
         )
         return "\n".join(names) if names else "(no skills mounted)"
 
+    def patch(
+        self,
+        path: str,
+        old_string: str = "",
+        new_string: str = "",
+        content: str = "",
+    ) -> str:
+        try:
+            if content and not old_string:
+                return self.write(path, content)
+            t = self._resolve(path)
+            if not t.exists():
+                return f"ERROR: not found {path}"
+            text = t.read_text(encoding="utf-8")
+            if old_string not in text:
+                return f"ERROR: old_string not found in {path}"
+            t.write_text(text.replace(old_string, new_string, 1), encoding="utf-8")
+            self.steps += 1
+            self.wrote_paths.add(path)
+            return f"PATCHED {path}"
+        except Exception as exc:
+            return f"ERROR: {exc}"
+
+    def preview(self, url: str = "") -> str:
+        self.steps += 1
+        actual = getattr(self, "preview_url", "") or url
+        return f"PREVIEW {actual or '(not started)'}"
+
     def exec_tool(self, call: dict) -> str:
+        if call.get("error"):
+            detail = call.get("detail") or ""
+            return f"ERROR: {call.get('error')} {detail}".strip()
         tool = call.get("tool")
         if tool == "write":
             return self.write(call.get("path", ""), call.get("content", ""))
+        if tool == "patch":
+            return self.patch(
+                call.get("path", ""),
+                call.get("old_string", ""),
+                call.get("new_string", ""),
+                call.get("content", ""),
+            )
+        if tool == "preview":
+            return self.preview(call.get("url", ""))
         if tool == "read":
             return self.read(call.get("path", ""))
         if tool == "ls":
@@ -758,6 +814,22 @@ class AdvancedExecutor(Executor):
             raise RuntimeError(
                 "AdvancedExecutor must run inside sandbox (ARENA_IN_SANDBOX=1)"
             )
+        from .format_runtime import run_universal_battle
+
+        return run_universal_battle(
+            self,
+            battle_id=battle_id,
+            format_config=format_config,
+            model_ids=model_ids,
+            round_visibility=round_visibility,
+            timeout_seconds=timeout_seconds,
+            role_to_model=role_to_model,
+            client=client,
+            status_check=status_check,
+            on_status=on_status,
+            deadline=deadline,
+            stop=stop,
+        )
 
         if deadline is None:
             deadline = time.time() + (timeout_seconds or 600)

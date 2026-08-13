@@ -89,12 +89,61 @@ COLLECTIONS = {
         ("id", "string", True),
         ("config", "string", True),
     ],
+    "host_catalog": [
+        ("name", "string", False),
+        ("base_url", "string", False),
+        ("model_name", "string", False),
+        ("enabled", "boolean", False),
+    ],
 }
 
 ARRAY_ATTRIBUTES = {
     "battles": {"model_ids": 256},
     "skills": {"tags": 64},
     "memories": {"tokens": 512, "chosen_skills": 64},
+}
+
+# (key, type, attributes). type is Appwrite index type: key | unique
+INDEXES = {
+    "battles": [
+        ("user_id_idx", "key", ["user_id"]),
+        ("status_idx", "key", ["status"]),
+        ("saved_idx", "key", ["saved"]),
+        ("format_id_idx", "key", ["format_id"]),
+        ("user_status_idx", "key", ["user_id", "status"]),
+        ("user_saved_idx", "key", ["user_id", "saved"]),
+    ],
+    "providers": [
+        ("user_id_idx", "key", ["user_id"]),
+        ("user_name_idx", "key", ["user_id", "name"]),
+    ],
+    "rounds": [
+        ("battle_id_idx", "key", ["battle_id"]),
+    ],
+    "scores": [
+        ("battle_id_idx", "key", ["battle_id"]),
+        ("battle_model_idx", "key", ["battle_id", "model_id"]),
+    ],
+    "battle_events": [
+        ("battle_id_idx", "key", ["battle_id"]),
+        ("battle_created_idx", "key", ["battle_id", "created_at"]),
+    ],
+    "leaderboard": [
+        ("format_id_idx", "key", ["format_id"]),
+        ("model_id_idx", "key", ["model_id"]),
+    ],
+    "formats": [
+        ("name_idx", "key", ["name"]),
+    ],
+    "skills": [
+        ("skill_idx", "key", ["skill"]),
+    ],
+    "memories": [
+        ("user_id_idx", "key", ["user_id"]),
+    ],
+    "targets": [
+        ("id_idx", "key", ["id"]),
+    ],
 }
 
 TEARDOWN_COLLECTIONS = list(COLLECTIONS)
