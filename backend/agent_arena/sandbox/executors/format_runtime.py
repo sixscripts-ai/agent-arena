@@ -266,7 +266,7 @@ def run_universal_battle(
                             state="failed",
                             result=str(exc)[:4000],
                         )
-                        raise
+                        break
                     calls = parse_tool_calls(content)
                     if not calls:
                         if not nudged:
@@ -420,10 +420,19 @@ def run_universal_battle(
             }
         )
 
-    return executor.finish(
-        client=client,
-        battle_id=battle_id,
-        format_config=format_config,
-        history=history,
-        on_status=on_status,
-    )
+    try:
+        return executor.finish(
+            client=client,
+            battle_id=battle_id,
+            format_config=format_config,
+            history=history,
+            on_status=on_status,
+        )
+    except Exception as exc:
+        emit("judge", "system", f"judge failed: {exc}", "error")
+        scores = {
+            r["model_id"]: (80.0 if r.get("passed") else 20.0) for r in results if r.get("model_id")
+        }
+        if on_status:
+            on_status("completed")
+        return scores
