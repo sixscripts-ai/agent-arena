@@ -15,8 +15,15 @@ from .sandbox.runner import run_battle_loop
 def _backend_public_url() -> str:
     return os.environ.get(
         "BACKEND_PUBLIC_URL",
-        "https://aschenbrenerashton--agent-arena-backend-fastapi-app.modal.run",
+        "https://sixscripts--agent-arena-backend-fastapi-app.modal.run",
     )
+
+
+def _skills_dir() -> Path:
+    mounted = Path("/opt/arena-skills")
+    if mounted.is_dir():
+        return mounted
+    return Path(__file__).resolve().parents[2] / ".agents" / "skills"
 
 
 def _load_battle(battle_id: str):
@@ -209,7 +216,7 @@ def try_spawn_modal_sandbox(battle_id: str) -> str | None:
             "timeout_seconds": int(battle.data.get("timeout_seconds") or 600),
         }
         app = modal.App.lookup("agent-arena-backend", create_if_missing=True)
-        skills_dir = Path(__file__).resolve().parents[2] / ".agents" / "skills"
+        skills_dir = _skills_dir()
         image = (
             modal.Image.debian_slim(python_version="3.11")
             .pip_install("httpx", "pytest")
