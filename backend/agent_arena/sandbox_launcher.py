@@ -118,17 +118,33 @@ def _run_direct(battle_id, databases, database_id, battle, cfg) -> None:
                 base, style, key, model = get_model_call_spec(
                     body["model_id"], battle.data["user_id"]
                 )
-                content = llm_client.chat_completion(
+                result = llm_client.chat_completion_result(
                     base_url=base,
                     auth_style=style,
                     api_key=key,
                     model=model,
                     messages=body.get("messages") or [],
+                    tools=body.get("tools"),
+                    tool_choice=body.get("tool_choice"),
                 )
-            except Exception:
-                content = f"[stub:{body['model_id']}]"
-            transport.rounds  # keep
-            return {"content": content}
+                return result.to_dict()
+            except Exception as exc:
+                from fastapi import HTTPException
+
+                if isinstance(exc, HTTPException):
+                    raise RuntimeError(str(exc.detail)) from exc
+                from agent_arena.model_protocol import classify_provider_error
+
+                kind = classify_provider_error(exc)
+                if kind:
+                    raise RuntimeError(kind) from exc
+                return {
+                    "content": f"[stub:{body['model_id']}]",
+                    "tool_calls": [],
+                    "finish_reason": "stop",
+                    "provider": "stub",
+                    "model": body["model_id"],
+                }
         if path == "/internal/judge":
             try:
                 return judge_mod.judge_battle(

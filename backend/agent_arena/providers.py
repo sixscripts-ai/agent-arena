@@ -8,6 +8,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from . import crypto, db
 from .auth import get_current_user
 from .config import settings
+from .model_protocol import model_capabilities as _model_capabilities
 from .schemas import ProviderCreate, ProviderHealth, ProviderOut
 
 router = APIRouter(prefix="/providers", tags=["providers"])
@@ -87,6 +88,9 @@ HOST_PROVIDERS: list[dict] = [
         "auth_style": "bearer",
         "model_name": "google/gemma-4-31b-it:free",
         "cred": "openrouter",
+        "supports_tools": False,
+        "supports_json_mode": False,
+        "supports_text_tools": True,
     },
     {
         "id": "host:or-gpt-oss-20b",
@@ -183,7 +187,17 @@ HOST_PROVIDERS: list[dict] = [
 
 HOST_FREE = next(p for p in HOST_PROVIDERS if p["id"] == HOST_FREE_ID)
 HOST_BY_ID = {p["id"]: p for p in HOST_PROVIDERS}
-_PUBLIC_KEYS = ("id", "name", "base_url", "masked_key", "auth_style", "model_name")
+_PUBLIC_KEYS = (
+    "id",
+    "name",
+    "base_url",
+    "masked_key",
+    "auth_style",
+    "model_name",
+    "supports_tools",
+    "supports_json_mode",
+    "supports_text_tools",
+)
 
 
 def is_host_model(model_id: str) -> bool:
@@ -225,9 +239,26 @@ def _host_configured(p: dict) -> bool:
 
 
 def configured_host_providers() -> list[dict]:
-    return [
-        {k: p[k] for k in _PUBLIC_KEYS} for p in HOST_PROVIDERS if _host_configured(p)
-    ]
+    out = []
+    for p in HOST_PROVIDERS:
+        if not _host_configured(p):
+            continue
+        item = {k: p[k] for k in _PUBLIC_KEYS if k in p}
+        caps = model_capabilities(p["id"])
+        item.update(caps)
+        out.append(item)
+    return out
+
+
+def model_capabilities(model_id: str) -> dict[str, bool]:
+    return _model_capabilities(model_id, HOST_BY_ID.get(model_id))
+
+
+def model_supports_universal_protocol(model_id: str) -> bool:
+    caps = model_capabilities(model_id)
+    return bool(
+        caps["supports_tools"] or caps["supports_json_mode"] or caps["supports_text_tools"]
+    )
 
 
 def _fernet_key() -> bytes:

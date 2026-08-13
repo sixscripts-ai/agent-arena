@@ -35,12 +35,22 @@ def test_internal_model_validates_battle(client, internal_key, monkeypatch):
     from agent_arena.auth import get_current_user
     from agent_arena.main import app
     from agent_arena import llm_client
+    from agent_arena.model_protocol import ModelResult
     from appwrite.query import Query
     from agent_arena import db
 
     user_id = make_user_id()
     app.dependency_overrides[get_current_user] = lambda: user_id
-    monkeypatch.setattr(llm_client, "chat_completion", lambda **kw: "hello from model")
+    monkeypatch.setattr(
+        llm_client,
+        "chat_completion_result",
+        lambda **kw: ModelResult(
+            content="hello from model",
+            finish_reason="stop",
+            provider="fake",
+            model="m",
+        ),
+    )
     try:
         formats = client.get("/formats").json()
         fmt_id = formats[0]["id"]

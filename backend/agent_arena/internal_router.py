@@ -65,7 +65,9 @@ class ModelBody(BaseModel):
     model_id: str
     phase: str = ""
     messages: list[dict] = Field(default_factory=list)
-    max_tokens: int = 1024
+    max_tokens: int = 4096
+    tools: list[dict] | None = None
+    tool_choice: str | dict | None = None
 
 
 class JudgeBody(BaseModel):
@@ -283,13 +285,15 @@ def internal_model(body: ModelBody, _ok: bool = Depends(require_internal_key)):
         raise HTTPException(status_code=400, detail="model not in battle")
     base, style, key, model = get_model_call_spec(body.model_id, battle.data["user_id"])
     try:
-        content = llm_client.chat_completion(
+        result = llm_client.chat_completion_result(
             base_url=base,
             auth_style=style,
             api_key=key,
             model=model,
             messages=body.messages,
             max_tokens=body.max_tokens,
+            tools=body.tools,
+            tool_choice=body.tool_choice,
         )
     except HTTPException as exc:
         print(
@@ -298,7 +302,7 @@ def internal_model(body: ModelBody, _ok: bool = Depends(require_internal_key)):
             flush=True,
         )
         raise
-    return {"content": content}
+    return result.to_dict()
 
 
 @router.post("/judge")
@@ -338,7 +342,14 @@ def internal_round(body: RoundBody, _ok: bool = Depends(require_internal_key)):
     ):
         raise HTTPException(status_code=400, detail="model not in battle")
     artifact = sanitize_artifact(body.artifact)
-    if body.event_type not in ("action_log", "heartbeat"):
+    if body.event_type not in (
+        "action_log",
+        "heartbeat",
+        "model_request",
+        "model_response",
+        "tool_start",
+        "tool_result",
+    ):
         databases.create_document(
             database_id,
             "rounds",

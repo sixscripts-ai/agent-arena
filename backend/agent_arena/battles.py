@@ -8,7 +8,7 @@ from sse_starlette.sse import EventSourceResponse
 
 from . import db, event_bus, mock_runner, sandbox_launcher
 from .auth import get_current_user
-from .providers import is_host_model
+from .providers import is_host_model, model_supports_universal_protocol
 from .schemas import BattleCreate
 
 router = APIRouter(prefix="/battles", tags=["battles"])
@@ -83,6 +83,16 @@ def create_battle(
             status_code=400, detail="arena_size must equal len(model_ids)"
         )
     _validate_model_ids(databases, database_id, user_id, body.model_ids)
+    if cfg.get("universal") is not False:
+        for mid in body.model_ids:
+            if not model_supports_universal_protocol(mid):
+                raise HTTPException(
+                    status_code=400,
+                    detail=(
+                        f"model {mid} cannot use native tools or structured-text "
+                        "tools for this format"
+                    ),
+                )
     if body.judge_provider_id and not is_host_model(body.judge_provider_id):
         _validate_model_ids(databases, database_id, user_id, [body.judge_provider_id])
     if active_battle_count(databases, database_id, user_id) >= MAX_ACTIVE_BATTLES:

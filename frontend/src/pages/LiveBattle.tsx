@@ -48,6 +48,15 @@ function eventLabel(kind?: string): string {
   if (kind === "action_log") return "TOOL";
   if (kind === "transcript") return "OUTPUT";
   if (kind === "artifact") return "ARTIFACT";
+  if (kind === "runtime_selected") return "RUNTIME";
+  if (kind === "participant_start") return "START";
+  if (kind === "participant_failed") return "FAILED";
+  if (kind === "participant_completed") return "DONE";
+  if (kind === "model_request") return "REQUEST";
+  if (kind === "model_response") return "MODEL";
+  if (kind === "tool_start") return "TOOL▶";
+  if (kind === "tool_result") return "RESULT";
+  if (kind === "error") return "ERROR";
   return (kind || "EVENT").toUpperCase();
 }
 
@@ -169,7 +178,22 @@ export default function LiveBattle() {
               }
             }
 
-            if (["artifact", "transcript", "action_log"].includes(ev.event)) {
+            if (
+              [
+                "artifact",
+                "transcript",
+                "action_log",
+                "runtime_selected",
+                "participant_start",
+                "participant_failed",
+                "participant_completed",
+                "model_request",
+                "model_response",
+                "tool_start",
+                "tool_result",
+                "error",
+              ].includes(ev.event)
+            ) {
               const artifact =
                 d?.artifact ??
                 wrapped?.artifact ??
