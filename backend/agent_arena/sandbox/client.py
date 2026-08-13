@@ -1,4 +1,5 @@
 """HTTP client for sandbox → backend /internal/* callbacks."""
+
 from __future__ import annotations
 
 import time
@@ -27,13 +28,15 @@ class HttpTransport:
                 if resp.status_code >= 500:
                     raise httpx.HTTPError(f"server {resp.status_code}")
                 if resp.status_code >= 400:
-                    raise RuntimeError(f"internal {path} failed: {resp.status_code} {resp.text[:200]}")
+                    raise RuntimeError(
+                        f"internal {path} failed: {resp.status_code} {resp.text[:200]}"
+                    )
                 return resp.json()
             except (httpx.HTTPError, RuntimeError) as exc:
                 last_err = exc
                 if isinstance(exc, RuntimeError) and "failed: 4" in str(exc):
                     raise
-                time.sleep(0.5 * (2 ** attempt))
+                time.sleep(0.5 * (2**attempt))
         raise RuntimeError(f"internal {path} exhausted retries: {last_err}")
 
 
@@ -43,7 +46,11 @@ class FakeTransport:
     def __init__(self):
         self.calls: list[tuple[str, dict]] = []
         self.model_replies: dict[str, Any] = {}
-        self.judge_result: dict[str, Any] = {"scores": {}, "justifications": {}, "judge_model": "mock"}
+        self.judge_result: dict[str, Any] = {
+            "scores": {},
+            "justifications": {},
+            "judge_model": "mock",
+        }
         self.rounds: list[dict] = []
         self.battle_status: str = "running"
 
@@ -97,12 +104,15 @@ class InternalClient:
         artifacts: list[dict],
         weights: dict | None = None,
     ) -> dict:
-        return self.t.post("/internal/judge", {
-            "battle_id": battle_id,
-            "rubric": rubric,
-            "weights": weights,
-            "artifacts": artifacts,
-        })
+        return self.t.post(
+            "/internal/judge",
+            {
+                "battle_id": battle_id,
+                "rubric": rubric,
+                "weights": weights,
+                "artifacts": artifacts,
+            },
+        )
 
     def round(
         self,
@@ -127,3 +137,13 @@ class InternalClient:
     def status(self, battle_id: str) -> str:
         data = self.t.post("/internal/status", {"battle_id": battle_id})
         return str(data.get("status") or "unknown")
+
+    def finalize(self, battle_id: str, status: str, scores: dict | None = None) -> dict:
+        return self.t.post(
+            "/internal/finalize",
+            {
+                "battle_id": battle_id,
+                "status": status,
+                "scores": scores or {},
+            },
+        )

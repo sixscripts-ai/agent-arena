@@ -1,3 +1,5 @@
+import os
+
 import httpx
 from appwrite.exception import AppwriteException
 from appwrite.query import Query
@@ -11,9 +13,10 @@ from .schemas import ProviderCreate, ProviderHealth, ProviderOut
 router = APIRouter(prefix="/providers", tags=["providers"])
 
 OPENROUTER_BASE = "https://openrouter.ai/api/v1"
-MODAL_KIMI_BASE = (
-    "https://aschenbrenerashton--ep-kimi-k3-server.us-west.modal.direct/v1"
+MODAL_KIMI_BASE = os.environ.get(
+    "JUDGE_MODAL_BASE", "https://inference.us-west.modal.direct/v1"
 )
+MODAL_KIMI_MODEL = os.environ.get("JUDGE_MODAL_MODEL", "moonshotai/Kimi-K3")
 HOST_FREE_ID = "host:openrouter-free"
 
 # Multi-backend host catalog. Each entry declares how to resolve credentials.
@@ -26,8 +29,18 @@ HOST_PROVIDERS: list[dict] = [
         "base_url": MODAL_KIMI_BASE,
         "masked_key": "modal-key…",
         "auth_style": "modal_proxy",
-        "model_name": "moonshotai/Kimi-K3",
+        "model_name": MODAL_KIMI_MODEL,
         "cred": "modal_judge",
+    },
+    # --- OpenCode Go (DeepSeek V4 Flash) ---
+    {
+        "id": "host:opencode-go",
+        "name": "OpenCode Go (DeepSeek V4 Flash)",
+        "base_url": "https://opencode.ai/zen/go/v1",
+        "masked_key": "sk-u98...",
+        "auth_style": "bearer",
+        "model_name": "deepseek-v4-flash",
+        "cred": "opencode_go",
     },
     # --- OpenRouter free tier (HOST_OPENROUTER_KEY) ---
     {
@@ -182,6 +195,8 @@ def _cred_material(cred: str) -> str | None:
     s = settings()
     if cred == "openrouter":
         return s.get("HOST_OPENROUTER_KEY") or None
+    if cred == "opencode_go":
+        return s.get("HOST_OPENCODE_GO_KEY") or None
     if cred == "modal_judge":
         key = s.get("JUDGE_MODAL_KEY") or ""
         secret = s.get("JUDGE_MODAL_SECRET") or ""

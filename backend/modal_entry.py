@@ -27,3 +27,14 @@ def fastapi_app():
     from agent_arena.main import app as fastapi_application
 
     return fastapi_application
+
+
+@app.function(
+    secrets=[modal.Secret.from_dotenv(str(_BASE_DIR / ".env"))],
+    schedule=modal.Period(minutes=1),
+)
+def reap_stale_battles():
+    from agent_arena.reaper import reap_stale_battles as _reap
+
+    reaped = _reap()
+    print(f"reaper: failed {len(reaped)} stale battle(s): {reaped}")

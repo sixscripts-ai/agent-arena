@@ -1,3 +1,5 @@
+import json
+import queue
 import threading
 import time
 import uuid
@@ -5,6 +7,41 @@ from collections import defaultdict, deque
 
 _queues: dict[str, deque] = defaultdict(deque)
 _lock = threading.Lock()
+
+_persist_queue: queue.Queue = queue.Queue()
+_persist_thread: threading.Thread | None = None
+
+
+def _persist_worker() -> None:
+    while True:
+        battle_id, event = _persist_queue.get()
+        try:
+            from . import db
+
+            databases = db.get_databases()
+            database_id = db.get_database_id()
+            databases.create_document(
+                database_id,
+                "battle_events",
+                "unique()",
+                {
+                    "battle_id": battle_id,
+                    "event_id": event["event_id"],
+                    "payload": json.dumps(
+                        {"type": event.get("type"), "data": event.get("data")}
+                    ),
+                    "created_at": float(event["created_at"]),
+                },
+            )
+        except Exception:
+            pass
+
+
+def _ensure_persist_thread() -> None:
+    global _persist_thread
+    if _persist_thread is None or not _persist_thread.is_alive():
+        _persist_thread = threading.Thread(target=_persist_worker, daemon=True)
+        _persist_thread.start()
 
 
 def publish(battle_id: str, event: dict) -> dict:
@@ -27,21 +64,9 @@ def subscribe(battle_id: str) -> list[dict]:
 
 
 def _persist_async(battle_id: str, event: dict) -> None:
-    """Best-effort durable write to Appwrite battle_events. Never raises."""
-    try:
-        from . import db
-        import json
-
-        databases = db.get_databases()
-        database_id = db.get_database_id()
-        databases.create_document(database_id, "battle_events", "unique()", {
-            "battle_id": battle_id,
-            "event_id": event["event_id"],
-            "payload": json.dumps({"type": event.get("type"), "data": event.get("data")}),
-            "created_at": float(event["created_at"]),
-        })
-    except Exception:
-        pass
+    """Enqueue a durable Appwrite write on a background thread. Never blocks or raises."""
+    _ensure_persist_thread()
+    _persist_queue.put((battle_id, event))
 
 
 def load_durable(battle_id: str) -> list[dict]:
@@ -63,12 +88,14 @@ def load_durable(battle_id: str) -> list[dict]:
                 payload = json.loads(d.data["payload"])
             except Exception:
                 payload = {"type": "unknown", "data": {}}
-            out.append({
-                "type": payload.get("type", "unknown"),
-                "data": payload.get("data", {}),
-                "event_id": d.data["event_id"],
-                "created_at": float(d.data.get("created_at") or 0),
-            })
+            out.append(
+                {
+                    "type": payload.get("type", "unknown"),
+                    "data": payload.get("data", {}),
+                    "event_id": d.data["event_id"],
+                    "created_at": float(d.data.get("created_at") or 0),
+                }
+            )
         out.sort(key=lambda e: (e.get("created_at", 0), e.get("event_id", "")))
         return out
     except Exception:

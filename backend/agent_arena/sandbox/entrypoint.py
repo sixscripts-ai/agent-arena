@@ -1,4 +1,5 @@
 """Modal Sandbox entrypoint: drive battle via HTTP internal API."""
+
 from __future__ import annotations
 
 import json
@@ -20,6 +21,7 @@ def main(battle_id: str) -> None:
 
     client = InternalClient(HttpTransport(base, key))
     terminal: list[str] = []
+    scores: dict = {}
 
     def status_check() -> str:
         try:
@@ -47,12 +49,16 @@ def main(battle_id: str) -> None:
             status_check=status_check,
             on_status=on_status,
         )
-        if not terminal or terminal[-1] not in ("completed", "failed", "cancelled"):
-            on_status("completed" if scores else "failed")
+        final = "completed" if scores else "failed"
     except Exception as exc:
         print(f"battle loop failed: {type(exc).__name__}: {exc}", file=sys.stderr)
-        if not terminal or terminal[-1] not in ("completed", "failed", "cancelled"):
-            on_status("failed")
+        final = "failed"
+    try:
+        client.finalize(
+            battle_id, status=final, scores=scores if final == "completed" else {}
+        )
+    except Exception as exc:
+        print(f"finalize({final}) failed: {type(exc).__name__}: {exc}", file=sys.stderr)
         raise
 
 

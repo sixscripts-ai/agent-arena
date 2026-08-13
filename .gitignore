@@ -26,3 +26,5 @@ frontend/.env.local
 .superpowers/
 .vite/
 data/
+
+.wip-*

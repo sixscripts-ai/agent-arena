@@ -1,4 +1,5 @@
 """Sandbox → backend callbacks. Hidden from OpenAPI; auth via X-Internal-Key."""
+
 from __future__ import annotations
 
 import json
@@ -7,6 +8,7 @@ from collections import defaultdict
 from threading import Lock
 
 from appwrite.exception import AppwriteException
+from appwrite.query import Query
 from fastapi import APIRouter, Depends, Header, HTTPException
 from pydantic import BaseModel, Field
 
@@ -87,6 +89,81 @@ class StatusBody(BaseModel):
     battle_id: str
 
 
+class FinalizeBody(BaseModel):
+    battle_id: str
+    status: str = "completed"
+    scores: dict[str, float] = Field(default_factory=dict)
+
+
+def _finalize_scores(databases, database_id: str, battle_id: str, scores: dict) -> bool:
+    """Persist score docs + Elo for a finished battle. Idempotent per battle."""
+    existing = databases.list_documents(
+        database_id,
+        "scores",
+        queries=[Query.equal("battle_id", battle_id), Query.limit(1)],
+    )
+    if existing.documents:
+        return False
+    for mid, value in scores.items():
+        databases.create_document(
+            database_id,
+            "scores",
+            "unique()",
+            {
+                "battle_id": battle_id,
+                "model_id": mid,
+                "score": float(value),
+                "judge_model": "host-judge",
+                "justification": "judged",
+            },
+        )
+    return True
+
+
+@router.post("/finalize")
+def internal_finalize(body: FinalizeBody, _ok: bool = Depends(require_internal_key)):
+    """Sandbox reports final outcome: persist scores, update battle status, apply Elo."""
+    _rate_limit(body.battle_id)
+    databases = db.get_databases()
+    database_id = db.get_database_id()
+    try:
+        battle = databases.get_document(database_id, "battles", body.battle_id)
+    except AppwriteException as exc:
+        raise HTTPException(status_code=404, detail="Battle not found") from exc
+    if battle.data.get("status") not in ("queued", "running"):
+        raise HTTPException(status_code=409, detail="battle not active")
+    status = body.status if body.status in ("completed", "failed") else "completed"
+    if status == "completed" and body.scores:
+        try:
+            if _finalize_scores(databases, database_id, body.battle_id, body.scores):
+                from . import leaderboard
+
+                leaderboard.apply_result(
+                    databases,
+                    database_id,
+                    battle.data["format_id"],
+                    list(battle.data.get("model_ids", [])),
+                    body.scores,
+                )
+        except Exception:
+            pass
+    databases.update_document(
+        database_id, "battles", body.battle_id, {"status": status}
+    )
+    if status == "completed" and body.scores:
+        event_bus.publish(
+            body.battle_id, {"type": "scores", "data": {"scores": body.scores}}
+        )
+    event_bus.publish(
+        body.battle_id,
+        {
+            "type": "battle_status",
+            "data": {"status": status},
+        },
+    )
+    return {"ok": True, "status": status}
+
+
 @router.post("/model")
 def internal_model(body: ModelBody, _ok: bool = Depends(require_internal_key)):
     _rate_limit(body.battle_id)
@@ -138,15 +215,23 @@ def internal_round(body: RoundBody, _ok: bool = Depends(require_internal_key)):
     databases = db.get_databases()
     database_id = db.get_database_id()
     battle = _active_battle(databases, database_id, body.battle_id)
-    if body.model_id not in battle.data.get("model_ids", []) and body.model_id != "system":
+    if (
+        body.model_id not in battle.data.get("model_ids", [])
+        and body.model_id != "system"
+    ):
         raise HTTPException(status_code=400, detail="model not in battle")
     artifact = sanitize_artifact(body.artifact)
-    databases.create_document(database_id, "rounds", "unique()", {
-        "battle_id": body.battle_id,
-        "phase": body.phase,
-        "model_id": body.model_id,
-        "artifact": artifact,
-    })
+    databases.create_document(
+        database_id,
+        "rounds",
+        "unique()",
+        {
+            "battle_id": body.battle_id,
+            "phase": body.phase,
+            "model_id": body.model_id,
+            "artifact": artifact,
+        },
+    )
     event_id = f"{body.battle_id}:{body.sequence if body.sequence is not None else int(time.time() * 1000)}"
     event = {
         "type": body.event_type,
@@ -172,3 +257,11 @@ def internal_status(body: StatusBody, _ok: bool = Depends(require_internal_key))
     except AppwriteException as exc:
         raise HTTPException(status_code=404, detail="Battle not found") from exc
     return {"status": battle.data.get("status") or "unknown"}
+
+
+@router.post("/reap")
+def internal_reap(_ok: bool = Depends(require_internal_key)):
+    from . import reaper
+
+    reaped = reaper.reap_stale_battles()
+    return {"reaped": reaped, "count": len(reaped)}

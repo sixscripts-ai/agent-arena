@@ -42,7 +42,8 @@ def test_provider_crud_and_encryption(client, authed_user):
 
     databases = db.get_databases()
     res = databases.list_documents(
-        db.get_database_id(), "providers",
+        db.get_database_id(),
+        "providers",
         queries=[Query.equal("user_id", user_id), Query.limit(100)],
     )
     doc = next(d for d in res.documents if d.id == pid)
@@ -62,7 +63,8 @@ def test_provider_crud_and_encryption(client, authed_user):
 
     # cleanup: delete provider documents for this user
     res = databases.list_documents(
-        db.get_database_id(), "providers",
+        db.get_database_id(),
+        "providers",
         queries=[Query.equal("user_id", user_id), Query.limit(100)],
     )
     for doc in res.documents:
@@ -71,11 +73,14 @@ def test_provider_crud_and_encryption(client, authed_user):
 
 @requires_appwrite
 def test_provider_health_bad_endpoint(client, authed_user):
-    resp = client.post("/providers/health", json={
-        "base_url": "https://example.invalid/v1",
-        "api_key": "sk-bad",
-        "auth_style": "bearer",
-    })
+    resp = client.post(
+        "/providers/health",
+        json={
+            "base_url": "https://example.invalid/v1",
+            "api_key": "sk-bad",
+            "auth_style": "bearer",
+        },
+    )
     assert resp.status_code in (400, 502)
 
 
@@ -92,19 +97,25 @@ def test_get_model_call_spec_host_free(monkeypatch):
     monkeypatch.delenv("HOST_OPENAI_KEY", raising=False)
     settings.cache_clear()
     try:
-        base, style, key, model = providers.get_model_call_spec("host:openrouter-free", "any-user")
+        base, style, key, model = providers.get_model_call_spec(
+            "host:openrouter-free", "any-user"
+        )
         assert base == "https://openrouter.ai/api/v1"
         assert style == "bearer"
         assert key == "sk-or-test-key"
         assert model == "nvidia/nemotron-3-ultra-550b-a55b:free"
-        base2, _, key2, model2 = providers.get_model_call_spec("host:or-laguna-s", "any-user")
+        base2, _, key2, model2 = providers.get_model_call_spec(
+            "host:or-laguna-s", "any-user"
+        )
         assert base2 == base and key2 == key
         assert model2 == "poolside/laguna-s-2.1:free"
-        mbase, mstyle, mkey, mmodel = providers.get_model_call_spec("host:modal-kimi", "any-user")
+        mbase, mstyle, mkey, mmodel = providers.get_model_call_spec(
+            "host:modal-kimi", "any-user"
+        )
         assert "modal.direct" in mbase
         assert mstyle == "modal_proxy"
         assert mkey == "ak-test:as-test"
-        assert mmodel == "moonshotai/Kimi-K3"
+        assert mmodel == providers.MODAL_KIMI_MODEL
         listed = providers.configured_host_providers()
         ids = {p["id"] for p in listed}
         assert "host:modal-kimi" in ids and "host:openrouter-free" in ids
@@ -142,7 +153,8 @@ def test_get_model_call_spec_user_provider(client, authed_user, monkeypatch):
     finally:
         databases = db.get_databases()
         res = databases.list_documents(
-            db.get_database_id(), "providers",
+            db.get_database_id(),
+            "providers",
             queries=[Query.equal("user_id", user_id), Query.limit(100)],
         )
         for doc in res.documents:

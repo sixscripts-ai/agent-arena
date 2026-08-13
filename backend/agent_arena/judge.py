@@ -1,4 +1,5 @@
 """Host-owned Kimi-K3 judge with retry, guarded JSON parse, and redaction."""
+
 from __future__ import annotations
 
 import json
@@ -13,7 +14,7 @@ from .config import settings
 from .redact import sanitize_artifact
 
 DEFAULT_JUDGE_MODEL = "moonshotai/Kimi-K3"
-DEFAULT_JUDGE_BASE = "https://aschenbrenerashton--ep-kimi-k3-server.us-west.modal.direct/v1"
+DEFAULT_JUDGE_BASE = "https://inference.us-west.modal.direct/v1"
 SCORE_MIN, SCORE_MAX = 0.0, 100.0
 MAX_ATTEMPTS = 3
 
@@ -63,7 +64,9 @@ def _host_judge_spec() -> tuple[str, str, str, str]:
     secret = s.get("JUDGE_MODAL_SECRET") or ""
     if not key or not secret:
         raise HTTPException(status_code=500, detail="Judge credentials not configured")
-    return DEFAULT_JUDGE_BASE, "modal_proxy", f"{key}:{secret}", DEFAULT_JUDGE_MODEL
+    base = s.get("JUDGE_MODAL_BASE") or DEFAULT_JUDGE_BASE
+    model = s.get("JUDGE_MODAL_MODEL") or DEFAULT_JUDGE_MODEL
+    return base, "modal_proxy", f"{key}:{secret}", model
 
 
 def judge_battle(
@@ -120,5 +123,7 @@ def judge_battle(
             }
         except Exception as exc:  # noqa: BLE001 — retry then fail battle
             last_err = exc
-            time.sleep(0.5 * (2 ** attempt))
-    raise HTTPException(status_code=502, detail=f"Judge failed after retries: {last_err}")
+            time.sleep(0.5 * (2**attempt))
+    raise HTTPException(
+        status_code=502, detail=f"Judge failed after retries: {last_err}"
+    )
