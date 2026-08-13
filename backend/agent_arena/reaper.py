@@ -9,11 +9,12 @@ from __future__ import annotations
 
 import os
 import time
+from datetime import datetime
 
 from appwrite.query import Query
 
 
-def _started_at(battle: dict) -> float:
+def _started_at(battle: dict, created_meta: str | None = None) -> float:
     for key in ("started_at", "created_at", "$createdAt"):
         value = battle.get(key)
         if value is None:
@@ -22,6 +23,14 @@ def _started_at(battle: dict) -> float:
             return float(value)
         except (TypeError, ValueError):
             continue
+    if created_meta:
+        s = str(created_meta)
+        if s.endswith("Z"):
+            s = s[:-1] + "+00:00"
+        try:
+            return datetime.fromisoformat(s).timestamp()
+        except (ValueError, TypeError):
+            pass
     return 0.0
 
 
@@ -43,7 +52,7 @@ def reap_stale_battles(databases=None, database_id: str | None = None) -> list[s
     reaped: list[str] = []
     for doc in res.documents:
         battle = doc.data
-        started = _started_at(battle)
+        started = _started_at(battle, getattr(doc, "createdat", None))
         if not started:
             continue
         timeout = int(battle.get("timeout_seconds") or 600)

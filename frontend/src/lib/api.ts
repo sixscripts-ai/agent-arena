@@ -1,4 +1,7 @@
-const BASE = (import.meta.env.VITE_MODAL_URL || "https://sixscripts--agent-arena-backend-fastapi-app.modal.run").replace(/\/$/, "");
+const BASE = (
+  import.meta.env.VITE_MODAL_URL ||
+  "https://sixscripts--agent-arena-backend-fastapi-app.modal.run"
+).replace(/\/$/, "");
 
 export class ApiError extends Error {
   status: number;
@@ -10,8 +13,13 @@ export class ApiError extends Error {
   }
 }
 
-async function request<T>(path: string, opts: { method?: string; body?: unknown; token?: string | null } = {}): Promise<T> {
-  const headers: Record<string, string> = { "Content-Type": "application/json" };
+async function request<T>(
+  path: string,
+  opts: { method?: string; body?: unknown; token?: string | null } = {},
+): Promise<T> {
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+  };
   if (opts.token) headers.Authorization = `Bearer ${opts.token}`;
   const res = await fetch(`${BASE}${path}`, {
     method: opts.method || "GET",
@@ -26,20 +34,50 @@ async function request<T>(path: string, opts: { method?: string; body?: unknown;
 
 export const api = {
   health: () => request<{ status: string }>("/health"),
-  formats: (token?: string | null) => request<FormatOut[]>("/formats", { token }),
+  stats: () => request<StatsOut>("/stats"),
+  formats: (token?: string | null) =>
+    request<FormatOut[]>("/formats", { token }),
   providers: (token: string) => request<ProviderOut[]>("/providers", { token }),
-  createProvider: (token: string, body: ProviderCreate) => request<ProviderOut>("/providers", { method: "POST", body, token }),
-  providerHealth: (token: string, body: { base_url: string; api_key: string; auth_style: string; model?: string }) =>
-    request<{ ok: boolean; status_code: number }>("/providers/health", { method: "POST", body, token }),
-  createBattle: (token: string, body: BattleCreate) => request<{ id: string; status: string }>("/battles", { method: "POST", body, token }),
-  getBattle: (token: string, id: string) => request<BattleOut>(`/battles/${id}`, { token }),
+  createProvider: (token: string, body: ProviderCreate) =>
+    request<ProviderOut>("/providers", { method: "POST", body, token }),
+  providerHealth: (
+    token: string,
+    body: {
+      base_url: string;
+      api_key: string;
+      auth_style: string;
+      model?: string;
+    },
+  ) =>
+    request<{ ok: boolean; status_code: number }>("/providers/health", {
+      method: "POST",
+      body,
+      token,
+    }),
+  createBattle: (token: string, body: BattleCreate) =>
+    request<{ id: string; status: string }>("/battles", {
+      method: "POST",
+      body,
+      token,
+    }),
+  getBattle: (token: string, id: string) =>
+    request<BattleOut>(`/battles/${id}`, { token }),
   listBattles: (token: string, saved?: boolean) => {
     const q = saved ? "?saved=true" : "";
     return request<BattleOut[]>(`/battles${q}`, { token });
   },
-  cancelBattle: (token: string, id: string) => request<{ id: string; status: string }>(`/battles/${id}/cancel`, { method: "POST", token }),
-  saveBattle: (token: string, id: string) => request<{ id: string; saved: boolean }>(`/battles/${id}/save`, { method: "POST", token }),
-  artifacts: (token: string, id: string) => request<ArtifactOut[]>(`/battles/${id}/artifacts`, { token }),
+  cancelBattle: (token: string, id: string) =>
+    request<{ id: string; status: string }>(`/battles/${id}/cancel`, {
+      method: "POST",
+      token,
+    }),
+  saveBattle: (token: string, id: string) =>
+    request<{ id: string; saved: boolean }>(`/battles/${id}/save`, {
+      method: "POST",
+      token,
+    }),
+  artifacts: (token: string, id: string) =>
+    request<ArtifactOut[]>(`/battles/${id}/artifacts`, { token }),
   leaderboard: (token: string | null, format = "overall") => {
     const params = new URLSearchParams({ format });
     return request<LeaderboardRow[]>(`/leaderboard?${params}`, { token });
@@ -102,10 +140,27 @@ export type BattleOut = {
 };
 
 export type ArtifactOut = { phase: string; model_id: string; artifact: string };
-export type LeaderboardRow = { model_id: string; format_id?: string; elo: number; games_played: number; rank?: number };
+export type LeaderboardRow = {
+  model_id: string;
+  format_id?: string;
+  elo: number;
+  games_played: number;
+  rank?: number;
+};
 export type StreamEvent = { event: string; data: any };
+export type StatsOut = {
+  battles_running: number;
+  battles_total: number;
+  median_duration_s: number | null;
+  top_models: { model_id: string; elo: number; games_played: number }[];
+};
 
-export async function streamBattle(battleId: string, token: string, onEvent: (ev: StreamEvent) => void, signal?: AbortSignal): Promise<void> {
+export async function streamBattle(
+  battleId: string,
+  token: string,
+  onEvent: (ev: StreamEvent) => void,
+  signal?: AbortSignal,
+): Promise<void> {
   const res = await fetch(`${BASE}/battles/${battleId}/stream`, {
     headers: { Authorization: `Bearer ${token}`, Accept: "text/event-stream" },
     signal,
@@ -126,7 +181,9 @@ export async function streamBattle(battleId: string, token: string, onEvent: (ev
       else if (line.startsWith("data:")) {
         const raw = line.slice(5).trim();
         let data: any = raw;
-        try { data = JSON.parse(raw); } catch {}
+        try {
+          data = JSON.parse(raw);
+        } catch {}
         onEvent({ event: eventName, data });
         eventName = "message";
       } else if (line === "") eventName = "message";
@@ -135,10 +192,17 @@ export async function streamBattle(battleId: string, token: string, onEvent: (ev
 }
 
 export function playableRoleCount(format: FormatOut): number {
-  if (Array.isArray(format.roles) && format.roles.length) return format.roles.filter((r) => r !== "judge").length;
+  if (Array.isArray(format.roles) && format.roles.length)
+    return format.roles.filter((r) => r !== "judge").length;
   let cfg: any = {};
-  if (typeof format.config === "string") { try { cfg = JSON.parse(format.config); } catch { cfg = {}; } }
-  else if (format.config && typeof format.config === "object") cfg = format.config;
+  if (typeof format.config === "string") {
+    try {
+      cfg = JSON.parse(format.config);
+    } catch {
+      cfg = {};
+    }
+  } else if (format.config && typeof format.config === "object")
+    cfg = format.config;
   const roles = (cfg.roles as string[]) || ["a", "b", "judge"];
   return roles.filter((r) => r !== "judge").length;
 }
