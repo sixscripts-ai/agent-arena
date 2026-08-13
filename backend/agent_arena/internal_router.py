@@ -93,6 +93,7 @@ class FinalizeBody(BaseModel):
     battle_id: str
     status: str = "completed"
     scores: dict[str, float] = Field(default_factory=dict)
+    failure_reason: str | None = None
 
 
 def _finalize_scores(databases, database_id: str, battle_id: str, scores: dict) -> bool:
@@ -248,8 +249,15 @@ def internal_finalize(body: FinalizeBody, _ok: bool = Depends(require_internal_k
         )
     except Exception:
         pass
+    payload = {"status": status}
+    if status == "failed" and body.failure_reason:
+        payload["failure_reason"] = body.failure_reason[:2000]
+        event_bus.publish(
+            body.battle_id,
+            {"type": "error", "data": {"message": payload["failure_reason"]}},
+        )
     databases.update_document(
-        database_id, "battles", body.battle_id, {"status": status}
+        database_id, "battles", body.battle_id, payload
     )
     if status == "completed" and body.scores:
         event_bus.publish(

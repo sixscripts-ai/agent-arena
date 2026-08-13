@@ -129,12 +129,14 @@ def test_stream_picks_up_durable_event_after_connect(client, monkeypatch):
         # Written after the stream snapshot, like another replica persisting late.
         # Also flip the battle terminal so the SSE generator returns and the
         # stream closes (avoids blocking forever on a "running" battle).
+        late_id = f"late-{battle_id[:12]}"
+
         def _write_late():
             time.sleep(1.5)
             event_bus._persist_one(
                 battle_id,
                 {
-                    "event_id": "late-event",
+                    "event_id": late_id,
                     "type": "artifact",
                     "data": {
                         "phase": "p",

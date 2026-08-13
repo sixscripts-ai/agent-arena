@@ -27,7 +27,9 @@ class HttpTransport:
             try:
                 resp = self.client.post(url, headers=headers, json=json)
                 if resp.status_code >= 500:
-                    raise httpx.HTTPError(f"server {resp.status_code}")
+                    raise httpx.HTTPError(
+                        f"server {resp.status_code} {resp.text[:300]}"
+                    )
                 if resp.status_code >= 400:
                     raise RuntimeError(
                         f"internal {path} failed: {resp.status_code} {resp.text[:200]}"
@@ -148,12 +150,18 @@ class InternalClient:
         data = self.t.post("/internal/status", {"battle_id": battle_id})
         return str(data.get("status") or "unknown")
 
-    def finalize(self, battle_id: str, status: str, scores: dict | None = None) -> dict:
-        return self.t.post(
-            "/internal/finalize",
-            {
-                "battle_id": battle_id,
-                "status": status,
-                "scores": scores or {},
-            },
-        )
+    def finalize(
+        self,
+        battle_id: str,
+        status: str,
+        scores: dict | None = None,
+        failure_reason: str | None = None,
+    ) -> dict:
+        payload: dict[str, Any] = {
+            "battle_id": battle_id,
+            "status": status,
+            "scores": scores or {},
+        }
+        if failure_reason:
+            payload["failure_reason"] = failure_reason[:2000]
+        return self.t.post("/internal/finalize", payload)

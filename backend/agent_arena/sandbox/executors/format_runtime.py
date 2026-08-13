@@ -247,16 +247,26 @@ def run_universal_battle(
                         f"Workdir files:\n{sess.ls()}\n\nTARGET:\n{str(target_code)[:2000]}\n\n"
                         f"Your turn {turn + 1}/{max_turns}, steps {sess.steps}/{max_steps}. Emit TOOL calls."
                     )
-                    content = client.model(
-                        battle_id,
-                        model_id,
-                        [
-                            {"role": "system", "content": system_prompt},
-                            {"role": "user", "content": user_prompt},
-                        ],
-                        phase=phase_name,
-                        max_tokens=race_tokens,
-                    ).strip()
+                    try:
+                        content = client.model(
+                            battle_id,
+                            model_id,
+                            [
+                                {"role": "system", "content": system_prompt},
+                                {"role": "user", "content": user_prompt},
+                            ],
+                            phase=phase_name,
+                            max_tokens=race_tokens,
+                        ).strip()
+                    except Exception as exc:
+                        emit_action(
+                            phase_name,
+                            model_id,
+                            "model",
+                            state="failed",
+                            result=str(exc)[:4000],
+                        )
+                        raise
                     calls = parse_tool_calls(content)
                     if not calls:
                         if not nudged:

@@ -132,7 +132,7 @@ def test_entrypoint_finalize_retries_transient_failure(monkeypatch):
         def __init__(self, transport):
             self.transport = transport
 
-        def finalize(self, battle_id, status, scores):
+        def finalize(self, battle_id, status, scores, failure_reason=None):
             attempts["n"] += 1
             if attempts["n"] == 1:
                 raise RuntimeError("transient finalize failure")

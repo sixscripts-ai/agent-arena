@@ -229,8 +229,10 @@ def stream_battle(battle_id: str, user_id: str = Depends(get_current_user)):
         while True:
             durable: list[dict] = []
             durable_ok = True
+            pulled = False
             now = _time()
             if now - last_durable_load >= _DURABLE_RELOAD_INTERVAL or watermark is None:
+                pulled = True
                 last_durable_load = now
                 try:
                     durable = _pull_durable()
@@ -239,7 +241,9 @@ def stream_battle(battle_id: str, user_id: str = Depends(get_current_user)):
                     yield {"event": "heartbeat", "data": json.dumps({"error": "durable_read"})}
             local = event_bus.subscribe(battle_id)
             new_events = merge_new_events(local, durable, seen_ids)
-            for ev in new_events:
+
+            def _emit(ev: dict) -> None:
+                nonlocal last_new_durable, watermark, watermark_id
                 if durable_ok and ev in durable:
                     last_new_durable = _time()
                 ts = float(ev.get("created_at") or 0)
@@ -247,6 +251,9 @@ def stream_battle(battle_id: str, user_id: str = Depends(get_current_user)):
                 if watermark is None or ts > watermark or (ts == watermark and eid > (watermark_id or "")):
                     watermark = ts
                     watermark_id = eid
+
+            for ev in new_events:
+                _emit(ev)
                 yield sse_message(ev)
             try:
                 battle = databases.get_document(database_id, "battles", battle_id)
@@ -256,6 +263,15 @@ def stream_battle(battle_id: str, user_id: str = Depends(get_current_user)):
                 _sleep(1)
                 continue
             if status in _TERMINAL:
+                if not pulled:
+                    try:
+                        durable = _pull_durable()
+                        last_durable_load = _time()
+                    except event_bus.DurableReadError:
+                        durable = []
+                    for ev in merge_new_events([], durable, seen_ids):
+                        _emit(ev)
+                        yield sse_message(ev)
                 if _time() - last_new_durable >= _SSE_DRAIN_SECONDS:
                     yield {
                         "event": "done",
