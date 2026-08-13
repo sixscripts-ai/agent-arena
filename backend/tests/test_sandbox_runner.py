@@ -2,7 +2,8 @@ import json
 
 from agent_arena.sandbox.client import FakeTransport, InternalClient
 from agent_arena.sandbox.runner import map_roles, playable_roles, run_battle_loop
-from agent_arena.sandbox.executors.build_and_break import _run_python, WIN_MARKER
+from agent_arena.sandbox.executors.build_and_break import WIN_MARKER
+from agent_arena.sandbox.executors._harness import run_python
 from pathlib import Path
 import tempfile
 
@@ -82,7 +83,7 @@ def test_format3_exec_escape_marker():
     with tempfile.TemporaryDirectory() as tmp:
         p = Path(tmp) / "escape.py"
         p.write_text(f'print("{WIN_MARKER}")\n', encoding="utf-8")
-        out, err, rc = _run_python(p, cwd=Path(tmp), timeout=10)
+        out, err, rc = run_python(p, cwd=Path(tmp), timeout=10)
         assert WIN_MARKER in out
         assert rc == 0
 

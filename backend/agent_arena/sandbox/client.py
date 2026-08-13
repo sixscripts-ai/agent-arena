@@ -12,7 +12,7 @@ class Transport(Protocol):
 
 
 class HttpTransport:
-    def __init__(self, base_url: str, internal_key: str, timeout: float = 180.0):
+    def __init__(self, base_url: str, internal_key: str, timeout: float = 600.0):
         self.base_url = base_url.rstrip("/")
         self.internal_key = internal_key
         self.timeout = timeout
@@ -42,20 +42,28 @@ class FakeTransport:
 
     def __init__(self):
         self.calls: list[tuple[str, dict]] = []
-        self.model_replies: dict[str, str] = {}
+        self.model_replies: dict[str, Any] = {}
         self.judge_result: dict[str, Any] = {"scores": {}, "justifications": {}, "judge_model": "mock"}
         self.rounds: list[dict] = []
+        self.battle_status: str = "running"
 
     def post(self, path: str, json: dict) -> dict:
         self.calls.append((path, json))
         if path == "/internal/model":
             mid = json.get("model_id", "")
-            return {"content": self.model_replies.get(mid, f"[reply:{mid}]")}
+            reply = self.model_replies.get(mid, f"[reply:{mid}]")
+            if isinstance(reply, list):
+                content = reply.pop(0) if reply else f"[reply:{mid}]"
+            else:
+                content = reply
+            return {"content": content}
         if path == "/internal/judge":
             return self.judge_result
         if path == "/internal/round":
             self.rounds.append(json)
-            return {"ok": True, "event_id": "fake"}
+            return {"ok": True, "event_id": "fake", "sequence": json.get("sequence")}
+        if path == "/internal/status":
+            return {"status": self.battle_status}
         raise RuntimeError(f"unknown path {path}")
 
 
@@ -63,13 +71,23 @@ class InternalClient:
     def __init__(self, transport: Transport):
         self.t = transport
 
-    def model(self, battle_id: str, model_id: str, messages: list[dict], phase: str = "") -> str:
-        data = self.t.post("/internal/model", {
+    def model(
+        self,
+        battle_id: str,
+        model_id: str,
+        messages: list[dict],
+        phase: str = "",
+        max_tokens: int | None = None,
+    ) -> str:
+        payload: dict[str, Any] = {
             "battle_id": battle_id,
             "model_id": model_id,
             "phase": phase,
             "messages": messages,
-        })
+        }
+        if max_tokens is not None:
+            payload["max_tokens"] = max_tokens
+        data = self.t.post("/internal/model", payload)
         return data.get("content", "")
 
     def judge(
@@ -93,11 +111,19 @@ class InternalClient:
         model_id: str,
         artifact: str,
         event_type: str = "artifact",
+        sequence: int | None = None,
     ) -> None:
-        self.t.post("/internal/round", {
+        payload: dict[str, Any] = {
             "battle_id": battle_id,
             "phase": phase,
             "model_id": model_id,
             "artifact": artifact,
             "event_type": event_type,
-        })
+        }
+        if sequence is not None:
+            payload["sequence"] = sequence
+        self.t.post("/internal/round", payload)
+
+    def status(self, battle_id: str) -> str:
+        data = self.t.post("/internal/status", {"battle_id": battle_id})
+        return str(data.get("status") or "unknown")

@@ -4,21 +4,12 @@ from __future__ import annotations
 import json
 import os
 import sys
-import urllib.request
-
-
-def _get_json(url: str, headers: dict) -> dict:
-    req = urllib.request.Request(url, headers=headers)
-    with urllib.request.urlopen(req, timeout=60) as resp:
-        return json.loads(resp.read().decode())
 
 
 def main(battle_id: str) -> None:
+    os.environ["ARENA_IN_SANDBOX"] = "1"
     base = os.environ["BACKEND_PUBLIC_URL"].rstrip("/")
     key = os.environ["INTERNAL_API_KEY"]
-    # Fetch battle + format via a tiny bootstrap endpoint isn't available;
-    # runner expects config injected. Use env BATTLE_BOOTSTRAP_JSON if set,
-    # else call public-less internal bootstrap stored in env at spawn time.
     bootstrap = os.environ.get("BATTLE_BOOTSTRAP_JSON")
     if not bootstrap:
         print("missing BATTLE_BOOTSTRAP_JSON", file=sys.stderr)
@@ -28,25 +19,41 @@ def main(battle_id: str) -> None:
     from agent_arena.sandbox.runner import run_battle_loop
 
     client = InternalClient(HttpTransport(base, key))
-    statuses: list[str] = []
+    terminal: list[str] = []
+
+    def status_check() -> str:
+        try:
+            return client.status(battle_id)
+        except Exception:
+            return "running"
 
     def on_status(status: str) -> None:
-        statuses.append(status)
-        # best-effort status update via round event
+        terminal.append(status)
         try:
-            client.round(battle_id, "system", "system", status, event_type="battle_status")
-        except Exception:
-            pass
+            client.round(
+                battle_id, "system", "system", status, event_type="battle_status"
+            )
+        except Exception as exc:
+            print(f"on_status({status}) failed: {exc}", file=sys.stderr)
 
-    run_battle_loop(
-        battle_id=battle_id,
-        format_config=data["format_config"],
-        model_ids=data["model_ids"],
-        round_visibility=data.get("round_visibility", "isolated"),
-        timeout_seconds=int(data.get("timeout_seconds") or 600),
-        client=client,
-        on_status=on_status,
-    )
+    try:
+        scores = run_battle_loop(
+            battle_id=battle_id,
+            format_config=data["format_config"],
+            model_ids=data["model_ids"],
+            round_visibility=data.get("round_visibility", "isolated"),
+            timeout_seconds=int(data.get("timeout_seconds") or 600),
+            client=client,
+            status_check=status_check,
+            on_status=on_status,
+        )
+        if not terminal or terminal[-1] not in ("completed", "failed", "cancelled"):
+            on_status("completed" if scores else "failed")
+    except Exception as exc:
+        print(f"battle loop failed: {type(exc).__name__}: {exc}", file=sys.stderr)
+        if not terminal or terminal[-1] not in ("completed", "failed", "cancelled"):
+            on_status("failed")
+        raise
 
 
 if __name__ == "__main__":

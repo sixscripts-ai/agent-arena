@@ -1,7 +1,7 @@
 """Battle loop: role map, phases (skip judge), executors, host judge."""
+
 from __future__ import annotations
 
-import json
 import threading
 import time
 from typing import Callable
@@ -32,7 +32,7 @@ def run_battle_loop(
     status_check: Callable[[], str] | None = None,
     on_status: Callable[[str], None] | None = None,
 ) -> dict:
-    """Drive phases until complete/failed/cancelled. Returns scores dict."""
+    """Resolve the executor and drive the battle. Returns scores dict."""
     deadline = time.time() + timeout_seconds
     stop = threading.Event()
 
@@ -51,50 +51,20 @@ def run_battle_loop(
             on_status("running")
         roles = format_config.get("roles", [])
         role_to_model = map_roles(roles, model_ids)
-        engine = format_config.get("engine", "scripted")
-        executor = get_executor(engine)
-        phases = format_config.get("phases", [])
-        history: list[dict] = []
-
-        for phase in phases:
-            if status_check and status_check() == "cancelled":
-                if on_status:
-                    on_status("cancelled")
-                return {}
-            if time.time() > deadline:
-                if on_status:
-                    on_status("failed")
-                return {}
-            # skip pure judge phases — host judge runs after real work
-            participants = [p for p in phase.get("participants", []) if p != "judge"]
-            if not participants:
-                continue
-            client.round(battle_id, phase["name"], "system", f"phase_start:{phase['name']}", event_type="phase_start")
-            arts = executor.run_phase(
-                client=client,
-                battle_id=battle_id,
-                phase=phase,
-                role_to_model=role_to_model,
-                history=history,
-                format_config=format_config,
-                round_visibility=round_visibility,
-            )
-            history.extend(arts)
-
-        rubric = format_config.get("judge_rubric") or "Score each model 0-100 fairly."
-        weights = format_config.get("scoring_weights")
-        result = client.judge(battle_id, rubric, history, weights=weights)
-        scores = result.get("scores") or {}
-        client.round(
-            battle_id,
-            "judge",
-            "system",
-            json.dumps(result),
-            event_type="scores",
+        executor = get_executor(format_config)
+        return executor.run_battle(
+            battle_id=battle_id,
+            format_config=format_config,
+            model_ids=model_ids,
+            round_visibility=round_visibility,
+            timeout_seconds=timeout_seconds,
+            role_to_model=role_to_model,
+            client=client,
+            status_check=status_check,
+            on_status=on_status,
+            deadline=deadline,
+            stop=stop,
         )
-        if on_status:
-            on_status("completed")
-        return scores
     except Exception:
         if on_status:
             on_status("failed")

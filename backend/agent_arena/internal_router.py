@@ -80,6 +80,11 @@ class RoundBody(BaseModel):
     model_id: str
     artifact: str
     event_type: str = "artifact"
+    sequence: int | None = None
+
+
+class StatusBody(BaseModel):
+    battle_id: str
 
 
 @router.post("/model")
@@ -142,13 +147,28 @@ def internal_round(body: RoundBody, _ok: bool = Depends(require_internal_key)):
         "model_id": body.model_id,
         "artifact": artifact,
     })
+    event_id = f"{body.battle_id}:{body.sequence if body.sequence is not None else int(time.time() * 1000)}"
     event = {
         "type": body.event_type,
+        "event_id": event_id,
+        "sequence": body.sequence,
         "data": {
             "phase": body.phase,
             "model_id": body.model_id,
             "artifact": artifact,
+            "sequence": body.sequence,
         },
     }
     event_bus.publish(body.battle_id, event)
-    return {"ok": True, "event_id": event.get("event_id")}
+    return {"ok": True, "event_id": event_id, "sequence": body.sequence}
+
+
+@router.post("/status")
+def internal_status(body: StatusBody, _ok: bool = Depends(require_internal_key)):
+    databases = db.get_databases()
+    database_id = db.get_database_id()
+    try:
+        battle = databases.get_document(database_id, "battles", body.battle_id)
+    except AppwriteException as exc:
+        raise HTTPException(status_code=404, detail="Battle not found") from exc
+    return {"status": battle.data.get("status") or "unknown"}

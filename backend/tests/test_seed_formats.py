@@ -5,11 +5,11 @@ from agent_arena.seed_formats import (
 )
 
 
-def test_exactly_twenty_five_formats():
-    assert len(FORMAT_DEFINITIONS) == 25
+def test_exactly_twenty_six_formats():
+    assert len(FORMAT_DEFINITIONS) == 26
 
 
-def test_all_six_engines_covered():
+def test_all_engines_covered():
     engines = {eng for _, eng, _ in FORMAT_DEFINITIONS}
     assert engines == set(ENGINE_TEMPLATES)
 
@@ -24,6 +24,7 @@ def test_user_selected_names_present():
     names = {name for name, _, _ in FORMAT_DEFINITIONS}
     assert "Pwn exploit race" in names
     assert "Same-defense adaptive attacks" in names
+    assert "Tool-using coding race" in names
 
 
 def test_build_format_shape():

@@ -4,6 +4,7 @@ from __future__ import annotations
 import json
 import os
 import threading
+from pathlib import Path
 
 from . import db, event_bus
 from .config import settings
@@ -200,30 +201,44 @@ def try_spawn_modal_sandbox(battle_id: str) -> str | None:
     if not key:
         return None
     try:
+        databases, _database_id, battle, cfg = _load_battle(battle_id)
+        bootstrap = {
+            "format_config": cfg,
+            "model_ids": list(battle.data["model_ids"]),
+            "round_visibility": battle.data.get("round_visibility", "isolated"),
+            "timeout_seconds": int(battle.data.get("timeout_seconds") or 600),
+        }
         app = modal.App.lookup("agent-arena-backend", create_if_missing=True)
+        skills_dir = Path(__file__).resolve().parents[2] / ".agents" / "skills"
         image = (
             modal.Image.debian_slim(python_version="3.11")
-            .pip_install("httpx")
+            .pip_install("httpx", "pytest")
             .add_local_python_source("agent_arena")
         )
-        secret = modal.Secret.from_dict({
-            "INTERNAL_API_KEY": key,
-            "BACKEND_PUBLIC_URL": _backend_public_url(),
-        })
+        if skills_dir.is_dir():
+            image = image.add_local_dir(str(skills_dir), remote_path="/opt/arena-skills")
+        secret = modal.Secret.from_dict(
+            {
+                "INTERNAL_API_KEY": key,
+                "BACKEND_PUBLIC_URL": _backend_public_url(),
+                "BATTLE_BOOTSTRAP_JSON": json.dumps(bootstrap),
+                "ARENA_SKILLS_ROOT": "/opt/arena-skills",
+            }
+        )
         sb = modal.Sandbox.create(
             "python",
             "-c",
-            (
-                "from agent_arena.sandbox.entrypoint import main; "
-                f"main({battle_id!r})"
-            ),
+            (f"from agent_arena.sandbox.entrypoint import main; main({battle_id!r})"),
             image=image,
             secrets=[secret],
             timeout=int(os.environ.get("SANDBOX_TIMEOUT", "900")),
             app=app,
         )
-        return getattr(sb, "object_id", None) or getattr(sb, "sandbox_id", None) or str(sb)
-    except Exception:
+        return (
+            getattr(sb, "object_id", None) or getattr(sb, "sandbox_id", None) or str(sb)
+        )
+    except Exception as exc:
+        print(f"try_spawn_modal_sandbox failed: {type(exc).__name__}: {exc}")
         return None
 
 
@@ -236,13 +251,35 @@ def start_battle(battle_id: str) -> None:
             try:
                 databases = db.get_databases()
                 databases.update_document(
-                    db.get_database_id(), "battles", battle_id, {"sandbox_id": sandbox_id}
+                    db.get_database_id(),
+                    "battles",
+                    battle_id,
+                    {"sandbox_id": sandbox_id},
                 )
             except Exception:
                 pass
+            _set_status(db.get_databases(), db.get_database_id(), battle_id, "running")
             return
-    # Default: in-process direct runner (works in tests without Modal)
+        try:
+            _databases, _database_id, _battle, cfg = _load_battle(battle_id)
+            engine = (cfg.get("engine") or "").lower()
+            if engine == "agent_tool_race" or "tool-using" in str(
+                cfg.get("id") or cfg.get("slug") or ""
+            ):
+                event_bus.publish(
+                    battle_id,
+                    {
+                        "type": "error",
+                        "data": {
+                            "message": "Modal sandbox spawn failed for tool-using race; falling back in-process",
+                        },
+                    },
+                )
+        except Exception:
+            pass
     os.environ.setdefault("ARENA_INPROCESS_DIRECT", "1")
+    if os.environ.get("ARENA_IN_SANDBOX") != "1":
+        os.environ["ARENA_IN_SANDBOX"] = "1"
     run_in_process(battle_id)
 
 
