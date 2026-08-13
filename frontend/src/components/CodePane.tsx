@@ -13,6 +13,7 @@ import {
   Wrench,
   XCircle,
 } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 export type PaneArtifact = {
   phase: string;
@@ -28,12 +29,13 @@ type Props = {
   code: string;
   status: string;
   tok?: string;
-  color?: "accent" | "neutral" | "success" | "danger";
+  color?: "accent" | "accent2" | "rival" | "neutral" | "success" | "danger";
   artifactMeta: string;
   history?: PaneArtifact[];
   events?: PaneArtifact[];
   win?: boolean;
   winText?: string;
+  className?: string;
 };
 
 type Tab = "artifact" | "diff" | "output" | "tools" | "versions";
@@ -57,6 +59,8 @@ type EventView = {
 
 const DOT: Record<string, string> = {
   accent: "bg-accent",
+  accent2: "bg-accent",
+  rival: "bg-accent",
   neutral: "bg-zinc-400",
   success: "bg-success",
   danger: "bg-danger",
@@ -184,6 +188,7 @@ export default function CodePane({
   events = [],
   win,
   winText,
+  className,
 }: Props) {
   const [tab, setTab] = useState<Tab>("artifact");
   const [selectedVersion, setSelectedVersion] = useState<number | null>(null);
@@ -237,7 +242,7 @@ export default function CodePane({
   }
 
   return (
-    <section className="card flex h-[560px] min-h-0 flex-col overflow-hidden bg-surface" aria-label={`${label} execution inspector`}>
+    <section className={cn("card flex h-[560px] min-h-0 flex-col overflow-hidden bg-surface", (color === "accent" || color === "accent2" || color === "rival" || color === "success") && "border-l-2 border-l-accent", className)} aria-label={`${label} execution inspector`}>
       <header className="flex min-h-[64px] items-center justify-between gap-3 border-b border-border px-4 py-3">
         <div className="flex min-w-0 items-center gap-3">
           <div className="grid h-8 w-8 shrink-0 place-items-center rounded-lg border border-borderStrong bg-surface2 font-mono text-[11px] font-semibold">

@@ -15,16 +15,17 @@ export default function SiteHeader() {
   const [open, setOpen] = useState(false);
   const nav = useNavigate();
   const loc = useLocation();
+  const battle = loc.pathname === "/battles/new" || loc.pathname.startsWith("/battles/");
 
   useEffect(() => { init(); }, [init]);
 
   return (
-    <header className="sticky top-0 z-50 border-b border-border bg-background/80 backdrop-blur">
+    <header className={`sticky top-0 z-50 border-b border-border ${battle ? "bg-background" : "bg-background/80 backdrop-blur"}`}>
       <div className="mx-auto flex h-14 max-w-[1360px] items-center justify-between px-6">
         <div className="flex items-center gap-6">
           <Link to="/" className="flex items-center gap-2.5">
-            <div className="grid h-7 w-7 place-items-center rounded-md bg-accent text-[13px] font-bold text-accent-fg">A</div>
-            <span className="text-[14px] font-semibold tracking-[-0.01em]">Agent Arena</span>
+            <div className={`grid h-7 w-7 place-items-center bg-accent text-[13px] font-bold text-accent-fg ${battle ? "rounded-none" : "rounded-md"}`}>A</div>
+            <span className={battle ? "text-[14px] font-semibold uppercase tracking-[0.12em]" : "text-[14px] font-semibold tracking-[-0.01em]"}>{battle ? "Arena" : "Agent Arena"}</span>
           </Link>
           <nav className="hidden items-center gap-1 md:flex">
             {LINKS.map(l => {

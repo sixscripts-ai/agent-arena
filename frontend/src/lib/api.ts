@@ -1,4 +1,4 @@
-const BASE = (import.meta.env.VITE_MODAL_URL || "https://aschenbrenerashton--agent-arena-backend-fastapi-app.modal.run").replace(/\/$/, "");
+const BASE = (import.meta.env.VITE_MODAL_URL || "https://sixscripts--agent-arena-backend-fastapi-app.modal.run").replace(/\/$/, "");
 
 export class ApiError extends Error {
   status: number;

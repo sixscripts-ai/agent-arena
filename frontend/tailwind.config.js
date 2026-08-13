@@ -18,7 +18,9 @@ export default {
           hover: "var(--accent-hover)",
           fg: "var(--accent-fg)",
           soft: "var(--accent-soft)",
+          2: "var(--accent-2)",
         },
+        rival: "var(--accent-2)",
         link: "var(--link)",
         success: "var(--success)",
         successStrong: "var(--success-strong)",
@@ -28,7 +30,7 @@ export default {
         codeFg: "var(--code-fg)",
         codeBorder: "var(--code-border)",
         lineNo: "var(--line-no)",
-        // Legacy brand aliases (still referenced by /design lab pages)
+        // Legacy brand aliases
         paper: "#FAF6F0",
         ink: "#0A0A0A",
         vermillion: "#FF3B30",
@@ -48,7 +50,8 @@ export default {
         },
       },
       fontFamily: {
-        display: ["Instrument Serif", "Newsreader", "serif"],
+        display: ["Sora", "Instrument Serif", "Newsreader", "serif"],
+        arena: ["Sora", "Geist", "system-ui", "sans-serif"],
         sans: ["Geist", "Geist Sans", "system-ui", "sans-serif"],
         mono: ["Geist Mono", "JetBrains Mono", "monospace"],
       },
